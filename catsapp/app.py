@@ -266,8 +266,9 @@ def chat(contact_id=None):
 @login_required
 def send_message():
     try:
-        receiver_id = request.form.get('receiver_id')
-        content = request.form.get('content')
+        data = request.get_json()
+        receiver_id = data.get('receiver_id')
+        content = data.get('content')
         
         if not receiver_id or not content:
             return jsonify({'success': False, 'error': 'Données manquantes'})
@@ -304,7 +305,8 @@ def send_message():
 @login_required
 def typing():
     try:
-        receiver_id = request.form.get('receiver_id')
+        data = request.get_json()
+        receiver_id = data.get('receiver_id')
         
         if not receiver_id:
             return jsonify({'success': False, 'error': 'ID du destinataire manquant'})
