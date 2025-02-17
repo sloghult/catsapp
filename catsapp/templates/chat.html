@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatsApp - Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <nav class="sidebar">
+            <div class="user-profile">
+                <h2>{{ session['username'] }}</h2>
+                <p>{{ session['prenom'] }} {{ session['nom'] }}</p>
+            </div>
+            <div class="contacts">
+                <h3>Conversations</h3>
+                <ul class="contact-list">
+                    {% for contact in contacts %}
+                    <li class="contact-item {% if current_contact and contact.id == current_contact.id %}active{% endif %}" data-user-id="{{ contact.id }}">
+                        <div class="contact-info">
+                            <h4>{{ contact.username }}</h4>
+                            <p class="last-message">{{ contact.last_message or 'Pas de message' }}</p>
+                            {% if contact.unread_count > 0 %}
+                            <span class="unread-count">{{ contact.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="sidebar-footer">
+                <a href="{{ url_for('logout') }}" class="logout-btn">Se déconnecter</a>
+            </div>
+        </nav>
+        
+        <main class="chat-main">
+            {% if current_contact %}
+            <div class="chat-header">
+                <h2>{{ current_contact.username }}</h2>
+            </div>
+            <div class="messages-container" id="messages">
+                {% for message in messages %}
+                <div class="message {% if message.sender_id == session['user_id'] %}sent{% else %}received{% endif %}">
+                    <div class="message-content">{{ message.content }}</div>
+                    <div class="message-time">{{ message.created_at.strftime('%H:%M') }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="message-input">
+                <form id="message-form">
+                    <input type="text" id="message-text" placeholder="Écrivez votre message..." required>
+                    <button type="submit">Envoyer</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="welcome-message">
+                <h1>Bienvenue sur CatsApp</h1>
+                <p>Sélectionnez une conversation pour commencer à chatter</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let currentContactId = {{ current_contact.id if current_contact else 'null' }};
+            
+            // Sélection d'un contact
+            $('.contact-item').click(function() {
+                const userId = $(this).data('user-id');
+                window.location.href = '/chat/' + userId;
+            });
+
+            // Envoi de message
+            $('#message-form').submit(function(e) {
+                e.preventDefault();
+                const content = $('#message-text').val().trim();
+                
+                if (content && currentContactId) {
+                    $.post('/send_message', {
+                        receiver_id: currentContactId,
+                        content: content
+                    }, function(response) {
+                        if (response.success) {
+                            $('#message-text').val('');
+                            // Ajouter le message à la conversation
+                            const messageHtml = `
+                                <div class="message sent">
+                                    <div class="message-content">${content}</div>
+                                    <div class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                </div>
+                            `;
+                            $('#messages').append(messageHtml);
+                            scrollToBottom();
+                        }
+                    });
+                }
+            });
+
+            // Fonction pour faire défiler jusqu'au dernier message
+            function scrollToBottom() {
+                const messages = document.getElementById('messages');
+                if (messages) {
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            }
+
+            // Faire défiler jusqu'au dernier message au chargement
+            scrollToBottom();
+
+            // Vérifier les nouveaux messages toutes les 3 secondes
+            function checkNewMessages() {
+                if (currentContactId) {
+                    $.get('/get_messages/' + currentContactId, function(response) {
+                        if (response.success && response.messages) {
+                            $('#messages').empty();
+                            response.messages.forEach(message => {
+                                const messageHtml = `
+                                    <div class="message ${message.sender_id == {{ session['user_id'] }} ? 'sent' : 'received'}">
+                                        <div class="message-content">${message.content}</div>
+                                        <div class="message-time">${new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                `;
+                                $('#messages').append(messageHtml);
+                            });
+                            scrollToBottom();
+                        }
+                    });
+                }
+            }
+
+            setInterval(checkNewMessages, 3000);
+        });
+    </script>
+</body>
+</html>

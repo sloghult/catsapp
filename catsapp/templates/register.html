@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Clone - Inscription</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <h1>Inscription</h1>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="POST" action="{{ url_for('register') }}">
+                <div class="form-group">
+                    <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" placeholder="Mot de passe" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="nom" placeholder="Nom" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="prenom" placeholder="Prénom" required>
+                </div>
+                <div class="form-group">
+                    <select name="role" class="role-select" required>
+                        <option value="user">Utilisateur</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+                <button type="submit" class="login-btn">S'inscrire</button>
+            </form>
+            <p class="register-link">
+                Déjà un compte ? <a href="{{ url_for('login') }}">Se connecter</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
