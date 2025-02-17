@@ -280,16 +280,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 2000);
         });
 
-        // Recharger les messages toutes les 3 secondes
-        setInterval(reloadMessages, 3000);
-
         // Écouter les événements de socket
         socket.onmessage = function(event) {
             const data = JSON.parse(event.data);
             
-            if (data.type === 'new_message') {
-                reloadMessages();
-            } else if (data.type === 'typing' && data.user_id == {{ current_contact.id }}) {
+            if (data.type === 'typing' && data.user_id == {{ current_contact.id }}) {
                 showTypingIndicator();
             }
         };
