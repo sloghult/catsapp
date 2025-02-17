@@ -1,0 +1,329 @@
+from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
+from database.db import init_db, DB_CONFIG
+import mysql.connector
+from werkzeug.security import generate_password_hash, check_password_hash
+import logging
+import socket
+import json
+import threading
+from functools import wraps
+from datetime import datetime
+
+# Configuration du logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+app.secret_key = 'votre_cle_secrete_ici'  # À changer en production
+
+# Configuration du socket client
+socket_clients = {}  # {user_id: socket}
+socket_lock = threading.Lock()
+
+def get_socket_client(user_id):
+    with socket_lock:
+        if user_id not in socket_clients:
+            try:
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.connect(('127.0.0.1', 5001))  # Mise à jour du port à 5001
+                
+                # Authentification
+                auth_data = {
+                    'user_id': user_id
+                }
+                client.send(json.dumps(auth_data).encode('utf-8'))
+                
+                # Démarrer un thread pour écouter les messages
+                def listen_for_messages(sock, uid):
+                    while True:
+                        try:
+                            data = sock.recv(4096).decode('utf-8')
+                            if not data:
+                                break
+                            
+                            message = json.loads(data)
+                            logger.debug(f"Message reçu pour l'utilisateur {uid}: {message}")
+                            
+                            # Traiter le message selon son type
+                            if message['type'] == 'new_message':
+                                # Stocker le message dans la base de données si nécessaire
+                                pass
+                            
+                        except Exception as e:
+                            logger.error(f"Erreur lors de la réception du message: {e}")
+                            break
+                    
+                    # Si on sort de la boucle, fermer la connexion
+                    with socket_lock:
+                        if uid in socket_clients:
+                            del socket_clients[uid]
+                            try:
+                                sock.close()
+                            except:
+                                pass
+                
+                # Démarrer le thread d'écoute
+                listener_thread = threading.Thread(target=listen_for_messages, args=(client, user_id))
+                listener_thread.daemon = True
+                listener_thread.start()
+                
+                socket_clients[user_id] = client
+                logger.debug(f"Nouvelle connexion socket créée pour l'utilisateur {user_id}")
+            
+            except Exception as e:
+                logger.error(f"Erreur lors de la création du socket: {e}")
+                return None
+        
+        return socket_clients.get(user_id)
+
+def get_db_connection():
+    try:
+        config = DB_CONFIG.copy()
+        config['database'] = 'catsapp'
+        connection = mysql.connector.connect(**config)
+        logger.debug("Connexion à la base de données réussie")
+        return connection
+    except Exception as e:
+        logger.error(f"Erreur de connexion à la base de données: {e}")
+        raise
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Veuillez vous connecter pour accéder à cette page')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/')
+def index():
+    if 'user_id' in session:
+        return redirect(url_for('chat'))
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            
+            cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+            user = cursor.fetchone()
+            
+            if user and check_password_hash(user['password'], password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['nom'] = user['nom']
+                session['prenom'] = user['prenom']
+                
+                # Créer une connexion socket pour l'utilisateur
+                get_socket_client(user['id'])
+                
+                return redirect(url_for('chat'))
+            
+            flash('Nom d\'utilisateur ou mot de passe incorrect')
+            return redirect(url_for('login'))
+        except Exception as e:
+            logger.error(f"Erreur lors de la connexion: {e}")
+            flash('Une erreur est survenue lors de la connexion')
+            return redirect(url_for('login'))
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        nom = request.form.get('nom')
+        prenom = request.form.get('prenom')
+        
+        try:
+            hashed_password = generate_password_hash(password)
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                'INSERT INTO users (username, password, nom, prenom) VALUES (%s, %s, %s, %s)',
+                (username, hashed_password, nom, prenom)
+            )
+            conn.commit()
+            flash('Inscription réussie ! Vous pouvez maintenant vous connecter.')
+            return redirect(url_for('login'))
+        except mysql.connector.IntegrityError:
+            flash('Ce nom d\'utilisateur existe déjà')
+            return redirect(url_for('register'))
+        except Exception as e:
+            logger.error(f"Erreur lors de l'inscription: {e}")
+            flash('Une erreur est survenue lors de l\'inscription')
+            return redirect(url_for('register'))
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template('register.html')
+
+@app.route('/chat')
+@app.route('/chat/<int:contact_id>')
+@login_required
+def chat(contact_id=None):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Récupérer la liste des contacts avec leurs derniers messages
+        cursor.execute('''
+            SELECT u.id, u.username,
+                   (SELECT content FROM messages m 
+                    WHERE (m.sender_id = u.id AND m.receiver_id = %s)
+                       OR (m.sender_id = %s AND m.receiver_id = u.id)
+                    ORDER BY created_at DESC LIMIT 1) as last_message,
+                   (SELECT COUNT(*) FROM messages m 
+                    WHERE m.sender_id = u.id 
+                      AND m.receiver_id = %s 
+                      AND m.is_read = FALSE) as unread_count
+            FROM users u
+            WHERE u.id != %s
+        ''', (session['user_id'], session['user_id'], session['user_id'], session['user_id']))
+        
+        contacts = cursor.fetchall()
+        
+        current_contact = None
+        messages = []
+        
+        if contact_id:
+            # Récupérer les informations du contact actuel
+            cursor.execute('SELECT id, username FROM users WHERE id = %s', (contact_id,))
+            current_contact = cursor.fetchone()
+            
+            if current_contact:
+                # Récupérer les messages de la conversation
+                cursor.execute('''
+                    SELECT * FROM messages 
+                    WHERE (sender_id = %s AND receiver_id = %s)
+                       OR (sender_id = %s AND receiver_id = %s)
+                    ORDER BY created_at
+                ''', (session['user_id'], contact_id, contact_id, session['user_id']))
+                messages = cursor.fetchall()
+                
+                # Marquer les messages comme lus
+                cursor.execute('''
+                    UPDATE messages 
+                    SET is_read = TRUE 
+                    WHERE sender_id = %s AND receiver_id = %s AND is_read = FALSE
+                ''', (contact_id, session['user_id']))
+                conn.commit()
+        
+        # S'assurer que l'utilisateur a une connexion socket
+        get_socket_client(session['user_id'])
+        
+        return render_template('chat.html', 
+                             contacts=contacts,
+                             current_contact=current_contact,
+                             messages=messages)
+                             
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement du chat: {e}")
+        flash('Une erreur est survenue')
+        return redirect(url_for('index'))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/send_message', methods=['POST'])
+@login_required
+def send_message():
+    try:
+        receiver_id = request.form.get('receiver_id')
+        content = request.form.get('content')
+        
+        if not receiver_id or not content:
+            return jsonify({'success': False, 'error': 'Données manquantes'})
+        
+        # Obtenir le socket client
+        client_socket = get_socket_client(session['user_id'])
+        if not client_socket:
+            return jsonify({'success': False, 'error': 'Impossible de se connecter au serveur de chat'})
+        
+        # Envoyer le message via le socket
+        message_data = {
+            'type': 'message',
+            'sender_id': session['user_id'],
+            'receiver_id': int(receiver_id),
+            'content': content
+        }
+        
+        try:
+            client_socket.send(json.dumps(message_data).encode('utf-8'))
+            return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Erreur lors de l'envoi du message: {e}")
+            # Supprimer le socket en cas d'erreur pour forcer une nouvelle connexion
+            with socket_lock:
+                if session['user_id'] in socket_clients:
+                    del socket_clients[session['user_id']]
+            return jsonify({'success': False, 'error': 'Erreur lors de l\'envoi du message'})
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi du message: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/typing', methods=['POST'])
+@login_required
+def typing():
+    try:
+        receiver_id = request.form.get('receiver_id')
+        
+        if not receiver_id:
+            return jsonify({'success': False, 'error': 'ID du destinataire manquant'})
+        
+        # Obtenir le socket client
+        client_socket = get_socket_client(session['user_id'])
+        if not client_socket:
+            return jsonify({'success': False, 'error': 'Impossible de se connecter au serveur de chat'})
+        
+        # Envoyer l'événement de frappe
+        typing_data = {
+            'type': 'typing',
+            'sender_id': session['user_id'],
+            'receiver_id': int(receiver_id)
+        }
+        
+        try:
+            client_socket.send(json.dumps(typing_data).encode('utf-8'))
+            return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Erreur lors de l'envoi de l'événement de frappe: {e}")
+            return jsonify({'success': False, 'error': 'Erreur lors de l\'envoi de l\'événement'})
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi de l'événement de frappe: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/logout')
+def logout():
+    # Fermer la connexion socket si elle existe
+    with socket_lock:
+        if 'user_id' in session and session['user_id'] in socket_clients:
+            try:
+                socket_clients[session['user_id']].close()
+            except:
+                pass
+            del socket_clients[session['user_id']]
+    
+    session.clear()
+    return redirect(url_for('login'))
+
+if __name__ == '__main__':
+    # Initialiser la base de données au démarrage
+    init_db()
+    app.run(debug=True)

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatsApp - Accueil</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <nav class="sidebar">
+            <div class="user-profile">
+                <h2>{{ session['username'] }}</h2>
+                <p>{{ session['prenom'] }} {{ session['nom'] }}</p>
+            </div>
+            <div class="contacts">
+                <h3>Conversations</h3>
+                <ul class="contact-list">
+                    {% for contact in contacts %}
+                    <li class="contact-item">
+                        <div class="contact-info">
+                            <h4>{{ contact.username }}</h4>
+                            <p>{{ contact.last_message }}</p>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="sidebar-footer">
+                <a href="{{ url_for('logout') }}" class="logout-btn">Se déconnecter</a>
+            </div>
+        </nav>
+        <main class="chat-main">
+            <div class="welcome-message">
+                <h1>Bienvenue sur CatsApp</h1>
+                <p>Sélectionnez une conversation pour commencer à chatter</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
