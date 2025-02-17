@@ -54,7 +54,6 @@
                     <table class="table table-hover" id="usersTable">
                         <thead class="table-light">
                             <tr>
-                                <th>ID</th>
                                 <th>Nom d'utilisateur</th>
                                 <th>Nom</th>
                                 <th>Prénom</th>
@@ -65,7 +64,6 @@
                         <tbody>
                             {% for user in users %}
                             <tr>
-                                <td>{{ user.id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <img src="https://ui-avatars.com/api/?name={{ user.prenom }}+{{ user.nom }}&background=random" 
