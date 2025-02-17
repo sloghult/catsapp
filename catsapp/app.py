@@ -159,7 +159,7 @@ def login():
             cursor.close()
             conn.close()
     
-    return render_template('login.html')
+    return render_template('user/login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -193,7 +193,7 @@ def register():
             cursor.close()
             conn.close()
     
-    return render_template('register.html')
+    return render_template('user/register.html')
 
 @app.route('/chat')
 @app.route('/chat/<int:contact_id>')
@@ -203,53 +203,47 @@ def chat(contact_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Récupérer la liste des contacts avec leurs derniers messages
-        cursor.execute('''
-            SELECT u.id, u.username,
-                   (SELECT content FROM messages m 
-                    WHERE (m.sender_id = u.id AND m.receiver_id = %s)
-                       OR (m.sender_id = %s AND m.receiver_id = u.id)
-                    ORDER BY created_at DESC LIMIT 1) as last_message,
-                   (SELECT COUNT(*) FROM messages m 
-                    WHERE m.sender_id = u.id 
-                      AND m.receiver_id = %s 
-                      AND m.is_read = FALSE) as unread_count
-            FROM users u
-            WHERE u.id != %s
-        ''', (session['user_id'], session['user_id'], session['user_id'], session['user_id']))
-        
+        # Récupérer tous les contacts (sauf l'utilisateur actuel)
+        cursor.execute("""
+            SELECT id, username 
+            FROM users 
+            WHERE id != %s
+        """, (session['user_id'],))
         contacts = cursor.fetchall()
         
+        # Récupérer les derniers messages pour chaque contact
+        for contact in contacts:
+            cursor.execute("""
+                SELECT content 
+                FROM messages 
+                WHERE (sender_id = %s AND receiver_id = %s) 
+                   OR (sender_id = %s AND receiver_id = %s) 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            """, (session['user_id'], contact['id'], contact['id'], session['user_id']))
+            last_message = cursor.fetchone()
+            contact['last_message'] = last_message['content'] if last_message else None
+
+        # Si un contact est sélectionné, récupérer les messages
         current_contact = None
         messages = []
-        
         if contact_id:
-            # Récupérer les informations du contact actuel
-            cursor.execute('SELECT id, username FROM users WHERE id = %s', (contact_id,))
+            # Récupérer les informations du contact
+            cursor.execute("SELECT id, username FROM users WHERE id = %s", (contact_id,))
             current_contact = cursor.fetchone()
             
             if current_contact:
-                # Récupérer les messages de la conversation
-                cursor.execute('''
-                    SELECT * FROM messages 
-                    WHERE (sender_id = %s AND receiver_id = %s)
-                       OR (sender_id = %s AND receiver_id = %s)
+                # Récupérer les messages
+                cursor.execute("""
+                    SELECT sender_id, content, created_at 
+                    FROM messages 
+                    WHERE (sender_id = %s AND receiver_id = %s) 
+                       OR (sender_id = %s AND receiver_id = %s) 
                     ORDER BY created_at
-                ''', (session['user_id'], contact_id, contact_id, session['user_id']))
+                """, (session['user_id'], contact_id, contact_id, session['user_id']))
                 messages = cursor.fetchall()
-                
-                # Marquer les messages comme lus
-                cursor.execute('''
-                    UPDATE messages 
-                    SET is_read = TRUE 
-                    WHERE sender_id = %s AND receiver_id = %s AND is_read = FALSE
-                ''', (contact_id, session['user_id']))
-                conn.commit()
         
-        # S'assurer que l'utilisateur a une connexion socket
-        get_socket_client(session['user_id'])
-        
-        return render_template('chat.html', 
+        return render_template('user/chat.html', 
                              contacts=contacts,
                              current_contact=current_contact,
                              messages=messages)
@@ -338,27 +332,28 @@ def typing():
 @login_required
 @admin_required
 def admin_dashboard():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # Récupérer les statistiques
-    cursor.execute('SELECT COUNT(*) as total_users FROM users')
-    total_users = cursor.fetchone()['total_users']
-    
-    cursor.execute('SELECT COUNT(*) as total_messages FROM messages')
-    total_messages = cursor.fetchone()['total_messages']
-    
-    # Récupérer la liste des utilisateurs
-    cursor.execute('SELECT id, username, nom, prenom, created_at FROM users')
-    users = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-    
-    return render_template('admin/dashboard.html', 
-                         total_users=total_users,
-                         total_messages=total_messages,
-                         users=users)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Récupérer tous les utilisateurs sauf l'admin
+        cursor.execute("""
+            SELECT id, username, is_admin, created_at 
+            FROM users 
+            WHERE id != %s
+            ORDER BY created_at DESC
+        """, (session['user_id'],))
+        
+        users = cursor.fetchall()
+        
+        return render_template('admin/admin_dashboard.html', users=users)
+    except Exception as e:
+        logger.error(f"Erreur dans le dashboard admin: {e}")
+        flash('Une erreur est survenue')
+        return redirect(url_for('index'))
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.route('/admin/add-user', methods=['POST'])
 @login_required
