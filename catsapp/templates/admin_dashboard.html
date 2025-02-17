@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatsApp - Administration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="dashboard">
+        <nav class="dashboard-nav">
+            <div class="dashboard-header">
+                <h1>Panneau d'administration</h1>
+                <p>Bienvenue, {{ session['username'] }}</p>
+            </div>
+            <ul class="dashboard-menu">
+                <li><a href="{{ url_for('admin_users') }}">Gestion des utilisateurs</a></li>
+                <li><a href="{{ url_for('admin_messages') }}">Gestion des messages</a></li>
+                <li><a href="{{ url_for('admin_stats') }}">Statistiques</a></li>
+            </ul>
+            <div class="dashboard-footer">
+                <a href="{{ url_for('logout') }}" class="logout-btn">Se déconnecter</a>
+            </div>
+        </nav>
+        <main class="dashboard-content">
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <h3>Utilisateurs totaux</h3>
+                    <p class="stat-number">{{ stats.total_users }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Messages aujourd'hui</h3>
+                    <p class="stat-number">{{ stats.messages_today }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Nouveaux utilisateurs</h3>
+                    <p class="stat-number">{{ stats.new_users }}</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

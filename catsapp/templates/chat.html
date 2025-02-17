@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="row h-100 g-0">
+        <!-- Liste des contacts -->
+        <div class="col-md-3 border-end">
+            <div class="contacts-list">
+                <div class="p-3 border-bottom">
+                    <h5 class="mb-0">Contacts</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for contact in contacts %}
+                    <a href="{{ url_for('chat', contact_id=contact.id) }}" 
+                       class="list-group-item list-group-item-action border-0 {% if contact.id == current_contact.id %}active{% endif %}">
+                        <div class="d-flex align-items-center">
+                            <img src="https://ui-avatars.com/api/?name={{ contact.username }}&background=random" 
+                                 class="rounded-circle me-2" width="40" height="40">
+                            <div>
+                                <h6 class="mb-0">{{ contact.username }}</h6>
+                                {% if contact.last_message %}
+                                <small class="text-muted">{{ contact.last_message[:30] }}...</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone de chat -->
+        <div class="col-md-9">
+            {% if current_contact %}
+            <div class="chat-area d-flex flex-column h-100">
+                <!-- En-tête du chat -->
+                <div class="chat-header border-bottom p-3">
+                    <div class="d-flex align-items-center">
+                        <img src="https://ui-avatars.com/api/?name={{ current_contact.username }}&background=random" 
+                             class="rounded-circle me-2" width="40" height="40">
+                        <h5 class="mb-0">{{ current_contact.username }}</h5>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="chat-messages flex-grow-1 p-3" id="messageContainer">
+                    {% for message in messages %}
+                        {% if message.sender_id == session.user_id %}
+                            <div class="message sent mb-3">
+                                <div class="message-content">
+                                    {{ message.content }}
+                                </div>
+                                <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                            </div>
+                        {% else %}
+                            <div class="message received mb-3">
+                                <div class="message-content">
+                                    {{ message.content }}
+                                </div>
+                                <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    <div id="typingIndicator" style="display: none;">
+                        <div class="message received">
+                            <div class="message-content">
+                                <em>En train d'écrire...</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zone de saisie -->
+                <div class="chat-input border-top p-3">
+                    <form id="messageForm">
+                        <div class="input-group">
+                            <input type="text" id="messageContent" class="form-control" placeholder="Votre message...">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="h-100 d-flex align-items-center justify-content-center">
+                <div class="text-center text-muted">
+                    <i class="fas fa-comments fa-3x mb-3"></i>
+                    <p class="mb-0">Sélectionnez un contact pour commencer à chatter</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.chat-container {
+    height: calc(100vh - 56px);
+    margin-top: 56px;
+    background-color: #f8f9fa;
+}
+
+.contacts-list {
+    height: 100%;
+    background-color: white;
+    overflow-y: auto;
+}
+
+.list-group-item {
+    padding: 1rem;
+    transition: background-color 0.2s;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item.active {
+    background-color: #e9ecef;
+    border-color: #e9ecef;
+    color: inherit;
+}
+
+.chat-messages {
+    overflow-y: auto;
+    background-color: white;
+}
+
+.message {
+    max-width: 70%;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.message.sent {
+    margin-left: auto;
+    align-items: flex-end;
+}
+
+.message.received {
+    margin-right: auto;
+    align-items: flex-start;
+}
+
+.message-content {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+}
+
+.message.sent .message-content {
+    background-color: #007bff;
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.message.received .message-content {
+    background-color: #e9ecef;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.chat-area {
+    background-color: white;
+}
+
+.chat-header {
+    background-color: white;
+}
+
+.chat-input {
+    background-color: white;
+}
+
+.chat-input .input-group {
+    background-color: white;
+    border-radius: 2rem;
+    overflow: hidden;
+}
+
+.chat-input .form-control {
+    border: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+}
+
+.chat-input .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if current_contact %}
+        const messageContainer = document.getElementById('messageContainer');
+        const messageForm = $('#messageForm');
+        const messageContent = $('#messageContent');
+        let typingTimeout;
+
+        // Faire défiler jusqu'aux derniers messages
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+
+        // Fonction pour recharger les messages
+        function reloadMessages() {
+            fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newMessages = doc.getElementById('messageContainer').innerHTML;
+                    messageContainer.innerHTML = newMessages;
+                    messageContainer.scrollTop = messageContainer.scrollHeight;
+                });
+        }
+
+        // Envoyer un message
+        messageForm.on('submit', function(e) {
+            e.preventDefault();
+            const content = messageContent.val().trim();
+            if (content) {
+                fetch('{{ url_for("send_message") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        receiver_id: {{ current_contact.id }},
+                        content: content
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        messageContent.val('');
+                        reloadMessages();
+                    }
+                });
+            }
+        });
+
+        // Événement de frappe
+        messageContent.on('input', function() {
+            clearTimeout(typingTimeout);
+            fetch('{{ url_for("typing") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    receiver_id: {{ current_contact.id }}
+                })
+            });
+            
+            typingTimeout = setTimeout(() => {
+                // Le timeout est géré côté serveur
+            }, 2000);
+        });
+
+        // Recharger les messages toutes les 3 secondes
+        setInterval(reloadMessages, 3000);
+
+        // Écouter les événements de socket
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'new_message') {
+                reloadMessages();
+            } else if (data.type === 'typing' && data.user_id == {{ current_contact.id }}) {
+                showTypingIndicator();
+            }
+        };
+
+        function showTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.style.display = 'block';
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+            
+            // Cacher l'indicateur après 2 secondes
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
+    {% endif %}
+});
+</script>
+{% endblock %}

@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="margin-top: 56px;">
+    <!-- Bandeau de statistiques -->
+    <div class="bg-primary text-white py-4 mb-4">
+        <div class="container-fluid px-4">
+            <div class="row align-items-center">
+                <div class="col-xl-6 col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-white p-3 me-3">
+                            <i class="fas fa-users fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-uppercase">Utilisateurs</h6>
+                            <h2 class="mb-0">{{ total_users }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-6 col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-white p-3 me-3">
+                            <i class="fas fa-comments fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-uppercase">Messages</h6>
+                            <h2 class="mb-0">{{ total_messages }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 text-gray-800">Tableau de bord</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="fas fa-user-plus"></i> Ajouter un utilisateur
+            </button>
+        </div>
+
+        <!-- Liste des utilisateurs -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Gestion des utilisateurs</h6>
+                <div class="input-group w-25">
+                    <input type="text" class="form-control" id="searchUser" placeholder="Rechercher...">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="usersTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom d'utilisateur</th>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                                <th>Date de création</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="https://ui-avatars.com/api/?name={{ user.prenom }}+{{ user.nom }}&background=random" 
+                                             class="rounded-circle me-2" width="32" height="32">
+                                        {{ user.username }}
+                                    </div>
+                                </td>
+                                <td>{{ user.nom }}</td>
+                                <td>{{ user.prenom }}</td>
+                                <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-warning me-2" 
+                                                onclick="resetPassword({{ user.id }})" 
+                                                title="Réinitialiser le mot de passe">
+                                            <i class="fas fa-key"></i>
+                                        </button>
+                                        {% if user.username != 'admin' %}
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteUser({{ user.id }})"
+                                                title="Supprimer l'utilisateur">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal d'ajout d'utilisateur -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajouter un utilisateur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nom</label>
+                            <input type="text" class="form-control" name="nom" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Prénom</label>
+                            <input type="text" class="form-control" name="prenom" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="addUser()">Ajouter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endblock %}
+
+    {% block scripts %}
+    <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script>
+    <script>
+    // Fonction de recherche dans le tableau
+    document.getElementById('searchUser').addEventListener('keyup', function() {
+        let searchText = this.value.toLowerCase();
+        let table = document.getElementById('usersTable');
+        let rows = table.getElementsByTagName('tr');
+
+        for (let i = 1; i < rows.length; i++) {
+            let show = false;
+            let cells = rows[i].getElementsByTagName('td');
+            for (let j = 0; j < cells.length; j++) {
+                if (cells[j].textContent.toLowerCase().includes(searchText)) {
+                    show = true;
+                    break;
+                }
+            }
+            rows[i].style.display = show ? '' : 'none';
+        }
+    });
+
+    function resetPassword(userId) {
+        if (confirm('Voulez-vous vraiment réinitialiser le mot de passe de cet utilisateur ?')) {
+            fetch(`/admin/reset-password/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Succès', 'Mot de passe réinitialisé avec succès', 'success');
+                } else {
+                    showToast('Erreur', data.error || 'Erreur lors de la réinitialisation du mot de passe', 'error');
+                }
+            });
+        }
+    }
+
+    function deleteUser(userId) {
+        if (confirm('Voulez-vous vraiment supprimer cet utilisateur ? Cette action est irréversible.')) {
+            fetch(`/admin/delete-user/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    showToast('Erreur', data.error || 'Erreur lors de la suppression de l\'utilisateur', 'error');
+                }
+            });
+        }
+    }
+
+    function addUser() {
+        const form = document.getElementById('addUserForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        fetch('/admin/add-user', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                showToast('Erreur', data.error || 'Erreur lors de l\'ajout de l\'utilisateur', 'error');
+            }
+        });
+    }
+
+    function showToast(title, message, type) {
+        // Créer un élément toast
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}</strong><br>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        // Ajouter le toast au conteneur
+        const container = document.createElement('div');
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        container.appendChild(toast);
+        document.body.appendChild(container);
+        
+        // Initialiser et afficher le toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Supprimer le conteneur après la fermeture
+        toast.addEventListener('hidden.bs.toast', () => {
+            container.remove();
+        });
+    }
+    </script>
+    {% endblock %}
