@@ -1,43 +1,50 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CatsApp - Administration</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="dashboard">
-        <nav class="dashboard-nav">
-            <div class="dashboard-header">
-                <h1>Panneau d'administration</h1>
-                <p>Bienvenue, {{ session['username'] }}</p>
-            </div>
-            <ul class="dashboard-menu">
-                <li><a href="{{ url_for('admin_users') }}">Gestion des utilisateurs</a></li>
-                <li><a href="{{ url_for('admin_messages') }}">Gestion des messages</a></li>
-                <li><a href="{{ url_for('admin_stats') }}">Statistiques</a></li>
-            </ul>
-            <div class="dashboard-footer">
-                <a href="{{ url_for('logout') }}" class="logout-btn">Se déconnecter</a>
-            </div>
-        </nav>
-        <main class="dashboard-content">
-            <div class="stats-overview">
-                <div class="stat-card">
-                    <h3>Utilisateurs totaux</h3>
-                    <p class="stat-number">{{ stats.total_users }}</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Messages aujourd'hui</h3>
-                    <p class="stat-number">{{ stats.messages_today }}</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Nouveaux utilisateurs</h3>
-                    <p class="stat-number">{{ stats.new_users }}</p>
-                </div>
-            </div>
-        </main>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Panneau d'administration</h1>
+        <p>Bienvenue, {{ session['username'] }}</p>
     </div>
-</body>
-</html>
+    
+    <div class="dashboard-content">
+        <h2>Gestion des utilisateurs</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nom d'utilisateur</th>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th>Date de création</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.nom }}</td>
+                    <td>{{ user.prenom }}</td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <a href="{{ url_for('reset_password', user_id=user.id) }}" class="btn btn-warning btn-sm">Réinitialiser MDP</a>
+                        <a href="{{ url_for('delete_user', user_id=user.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')">Supprimer</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <h2>Ajouter un utilisateur</h2>
+        <form action="{{ url_for('add_user') }}" method="POST" class="form-inline">
+            <input type="text" name="username" placeholder="Nom d'utilisateur" required class="form-control">
+            <input type="text" name="nom" placeholder="Nom" required class="form-control">
+            <input type="text" name="prenom" placeholder="Prénom" required class="form-control">
+            <input type="password" name="password" placeholder="Mot de passe" required class="form-control">
+            <button type="submit" class="btn btn-primary">Ajouter</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
