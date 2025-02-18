@@ -1,4 +1,6 @@
-'''
+# CHIFFREMENT CESAR
+
+
 def encrypt(text, shift=3):
     """Chiffre un texte en utilisant le chiffrement de César."""
     encrypted = ""
@@ -13,8 +15,10 @@ def encrypt(text, shift=3):
 def decrypt(text, shift=3):
     """Déchiffre un texte chiffré avec le chiffrement de César."""
     return encrypt(text, -shift)  # Le déchiffrement est un chiffrement avec un décalage négatif
-'''
 
+
+#CHIFFREMENT  VIGENERE
+'''
 def encrypt(text, key="CATSAPP"):
     """
     Chiffre un texte en utilisant le chiffrement de Vigenère.
@@ -92,3 +96,4 @@ def decrypt(text, key="CATSAPP"):
             decrypted += char
             
     return decrypted
+'''

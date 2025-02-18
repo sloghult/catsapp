@@ -404,11 +404,14 @@ def send_message():
         if not cursor.fetchone():
             return jsonify({'success': False, 'error': 'Vous devez être contacts pour envoyer un message'}), 403
 
+        # Chiffrer le message avant de l'insérer dans la base de données
+        encrypted_content = encrypt(content)
+        
         # Insérer le message dans la base de données
         cursor.execute("""
             INSERT INTO messages (sender_id, receiver_id, content) 
             VALUES (%s, %s, %s)
-        """, (session['user_id'], receiver_id, content))
+        """, (session['user_id'], receiver_id, encrypted_content))
         conn.commit()
 
         cursor.close()
