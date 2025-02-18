@@ -3,25 +3,25 @@
 {% block title %}CatsApp - Chat{% endblock %}
 
 {% block content %}
-<div class="chat-container">
-    <div class="row h-100 g-0">
+<div>
+    <div>
         <!-- Liste des contacts -->
-        <div class="col-md-3 border-end">
-            <div class="contacts-list">
-                <div class="p-3 border-bottom">
-                    <h5 class="mb-0">Contacts</h5>
+        <div class="">
+            <div class="">
+                <div class="">
+                    <h5 class="">Contacts</h5>
                 </div>
-                <div class="list-group list-group-flush">
+                <div class="">
                     {% for contact in contacts %}
                     <a href="{{ url_for('chat', contact_id=contact.id) }}" 
-                       class="list-group-item list-group-item-action border-0 {% if contact.id == current_contact.id %}active{% endif %}">
-                        <div class="d-flex align-items-center">
+                       class=" {% if contact.id == current_contact.id %}active{% endif %}">
+                        <div style="display: flex; align-items: center;">
                             <img src="https://ui-avatars.com/api/?name={{ contact.username }}&background=random" 
                                  class="rounded-circle me-2" width="40" height="40">
                             <div>
-                                <h6 class="mb-0">{{ contact.username }}</h6>
+                                <h6 class="">{{ contact.username }}</h6>
                                 {% if contact.last_message %}
-                                <small class="text-muted">{{ contact.last_message[:30] }}...</small>
+                                <small class="">{{ contact.last_message[:30] }}..</small>
                                 {% endif %}
                             </div>
                         </div>
@@ -32,40 +32,40 @@
         </div>
 
         <!-- Zone de chat -->
-        <div class="col-md-9">
+        <div class="">
             {% if current_contact %}
-            <div class="chat-area d-flex flex-column h-100">
+            <div class="">
                 <!-- En-tête du chat -->
-                <div class="chat-header border-bottom p-3">
-                    <div class="d-flex align-items-center">
+                <div class="">
+                    <div class="">
                         <img src="https://ui-avatars.com/api/?name={{ current_contact.username }}&background=random" 
                              class="rounded-circle me-2" width="40" height="40">
-                        <h5 class="mb-0">{{ current_contact.username }}</h5>
+                        <h5 class="">{{ current_contact.username }}</h5>
                     </div>
                 </div>
 
                 <!-- Messages -->
-                <div class="chat-messages flex-grow-1 p-3" id="messageContainer">
+                <div class="" id="">
                     {% for message in messages %}
                         {% if message.sender_id == session.user_id %}
-                            <div class="message sent mb-3">
-                                <div class="message-content">
+                            <div class="">
+                                <div class="">
                                     {{ message.content }}
                                 </div>
-                                <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <small class="">{{ message.created_at.strftime('%H:%M') }}</small>
                             </div>
                         {% else %}
-                            <div class="message received mb-3">
-                                <div class="message-content">
+                            <div class="">
+                                <div class="">
                                     {{ message.content }}
                                 </div>
-                                <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <small class="">{{ message.created_at.strftime('%H:%M') }}</small>
                             </div>
                         {% endif %}
                     {% endfor %}
-                    <div id="typingIndicator" style="display: none;">
-                        <div class="message received">
-                            <div class="message-content">
+                    <div id="" style="display: none;">
+                        <div class="">
+                            <div class="">
                                 <em>En train d'écrire...</em>
                             </div>
                         </div>
@@ -73,22 +73,22 @@
                 </div>
 
                 <!-- Zone de saisie -->
-                <div class="chat-input border-top p-3">
+                <div class="">
                     <form id="messageForm">
-                        <div class="input-group">
+                        <div class="">
                             <input type="text" id="messageContent" class="form-control" placeholder="Votre message...">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i>
+                            <button type="submit" class="">
+                                <i class=""></i>
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
             {% else %}
-            <div class="h-100 d-flex align-items-center justify-content-center">
-                <div class="text-center text-muted">
-                    <i class="fas fa-comments fa-3x mb-3"></i>
-                    <p class="mb-0">Sélectionnez un contact pour commencer à chatter</p>
+            <div class="">
+                <div class="">
+                    <i class=""></i>
+                    <p class="">Sélectionnez un contact pour commencer à chatter</p>
                 </div>
             </div>
             {% endif %}
@@ -99,92 +99,92 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    {% if current_contact %}
-        const messageContainer = document.getElementById('messageContainer');
-        const messageForm = $('#messageForm');
-        const messageContent = $('#messageContent');
-        let typingTimeout;
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if current_contact %}
+            const messageContainer = document.getElementById('messageContainer');
+            const messageForm = $('#messageForm');
+            const messageContent = $('#messageContent');
+            let typingTimeout;
 
-        // Faire défiler jusqu'aux derniers messages
-        messageContainer.scrollTop = messageContainer.scrollHeight;
+            // Faire défiler jusqu'aux derniers messages
+            messageContainer.scrollTop = messageContainer.scrollHeight;
 
-        // Fonction pour recharger les messages
-        function reloadMessages() {
-            fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const newMessages = doc.getElementById('messageContainer').innerHTML;
-                    messageContainer.innerHTML = newMessages;
-                    messageContainer.scrollTop = messageContainer.scrollHeight;
-                });
-        }
+            // Fonction pour recharger les messages
+            function reloadMessages() {
+                fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newMessages = doc.getElementById('messageContainer').innerHTML;
+                        messageContainer.innerHTML = newMessages;
+                        messageContainer.scrollTop = messageContainer.scrollHeight;
+                    });
+            }
 
-        // Envoyer un message
-        messageForm.on('submit', function(e) {
-            e.preventDefault();
-            const content = messageContent.val().trim();
-            if (content) {
-                fetch('{{ url_for("send_message") }}', {
+            // Envoyer un message
+            messageForm.on('submit', function(e) {
+                e.preventDefault();
+                const content = messageContent.val().trim();
+                if (content) {
+                    fetch('{{ url_for("send_message") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            receiver_id: {{ current_contact.id }},
+                            content: content
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            messageContent.val('');
+                            reloadMessages();
+                        }
+                    });
+                }
+            });
+
+            // Événement de frappe
+            messageContent.on('input', function() {
+                clearTimeout(typingTimeout);
+                fetch('{{ url_for("typing") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        receiver_id: {{ current_contact.id }},
-                        content: content
+                        receiver_id: {{ current_contact.id }}
                     })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        messageContent.val('');
-                        reloadMessages();
-                    }
                 });
-            }
-        });
-
-        // Événement de frappe
-        messageContent.on('input', function() {
-            clearTimeout(typingTimeout);
-            fetch('{{ url_for("typing") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    receiver_id: {{ current_contact.id }}
-                })
+                
+                typingTimeout = setTimeout(() => {
+                    // Le timeout est géré côté serveur
+                }, 2000);
             });
-            
-            typingTimeout = setTimeout(() => {
-                // Le timeout est géré côté serveur
-            }, 2000);
-        });
 
-        // Écouter les événements de socket
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'typing' && data.user_id == {{ current_contact.id }}) {
-                showTypingIndicator();
+            // Écouter les événements de socket
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'typing' && data.user_id == {{ current_contact.id }}) {
+                    showTypingIndicator();
+                }
+            };
+
+            function showTypingIndicator() {
+                const indicator = document.getElementById('typingIndicator');
+                indicator.style.display = 'block';
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+                
+                // Cacher l'indicateur après 2 secondes
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 2000);
             }
-        };
-
-        function showTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            indicator.style.display = 'block';
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-            
-            // Cacher l'indicateur après 2 secondes
-            setTimeout(() => {
-                indicator.style.display = 'none';
-            }, 2000);
-        }
-    {% endif %}
-});
+        {% endif %}
+    });
 </script>
 {% endblock %}

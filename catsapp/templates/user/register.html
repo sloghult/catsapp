@@ -14,19 +14,19 @@
             {% endif %}
         {% endwith %}
         <form method="POST" action="{{ url_for('register') }}">
-            <div class="form-group">
+            <div class="form">
                 <input type="text" name="username" placeholder="Nom d'utilisateur" required>
             </div>
-            <div class="form-group">
+            <div class="form">
                 <input type="password" name="password" placeholder="Mot de passe" required>
             </div>
-            <div class="form-group">
+            <div class="form">
                 <input type="text" name="nom" placeholder="Nom" required>
             </div>
-            <div class="form-group">
+            <div class="form">
                 <input type="text" name="prenom" placeholder="Prénom" required>
             </div>
-            <div class="form-group">
+            <div class="form">
                 <select name="role" class="role-select" required>
                     <option value="user">Utilisateur</option>
                     <option value="admin">Administrateur</option>
