@@ -1,7 +1,7 @@
 # CHIFFREMENT CESAR
 
 
-def encrypt(text, shift=3):
+def encrypt_cesar(text, shift=3):
     """Chiffre un texte en utilisant le chiffrement de César."""
     encrypted = ""
     for char in text:
@@ -12,14 +12,14 @@ def encrypt(text, shift=3):
             encrypted += char
     return encrypted
 
-def decrypt(text, shift=3):
+def decrypt_cesar(text, shift=3):
     """Déchiffre un texte chiffré avec le chiffrement de César."""
-    return encrypt(text, -shift)  # Le déchiffrement est un chiffrement avec un décalage négatif
+    return encrypt_cesar(text, -shift)  # Le déchiffrement est un chiffrement avec un décalage négatif
 
 
 #CHIFFREMENT  VIGENERE
 '''
-def encrypt(text, key="CATSAPP"):
+def encrypt_vigenere(text, key="CATSAPP"):
     """
     Chiffre un texte en utilisant le chiffrement de Vigenère.
     
@@ -58,7 +58,7 @@ def encrypt(text, key="CATSAPP"):
             
     return encrypted
 
-def decrypt(text, key="CATSAPP"):
+def decrypt_vigenere(text, key="CATSAPP"):
     """
     Déchiffre un texte chiffré avec le chiffrement de Vigenère.
     
@@ -97,3 +97,18 @@ def decrypt(text, key="CATSAPP"):
             
     return decrypted
 '''
+
+from base64 import b64encode, b64decode
+
+def encrypt(text):
+    """Chiffre un texte en utilisant un encodage base64 simple."""
+    if not isinstance(text, str):
+        text = str(text)
+    return b64encode(text.encode('utf-8')).decode('utf-8')
+
+def decrypt(text):
+    """Déchiffre un texte encodé en base64."""
+    try:
+        return b64decode(text.encode('utf-8')).decode('utf-8')
+    except:
+        return text  # Retourne le texte original si le déchiffrement échoue

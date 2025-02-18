@@ -91,8 +91,12 @@ def get_db_connection():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        logger.info(f"Vérification de la session: {session}")
         if 'user_id' not in session:
-            flash('Veuillez vous connecter pour accéder à cette page')
+            logger.error("Tentative d'accès sans session valide")
+            if request.is_json:
+                return jsonify({'success': False, 'error': 'Veuillez vous connecter'}), 401
+            flash('Veuillez vous connecter pour accéder à cette page', 'error')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -339,8 +343,7 @@ def accept_contact():
 
     # Vérifier si une demande est en attente
     cursor.execute("""
-        SELECT * FROM contacts 
-        WHERE user_id = %s AND contact_id = %s AND status = 'pending'
+        SELECT * FROM contacts WHERE user_id = %s AND contact_id = %s AND status = 'pending'
     """, (contact_id, user_id))
 
     if not cursor.fetchone():
@@ -377,7 +380,8 @@ def list_contacts():
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT users.id, users.username FROM contacts
+        SELECT users.id, users.username 
+        FROM contacts
         JOIN users ON contacts.contact_id = users.id
         WHERE contacts.user_id = %s AND contacts.status = 'accepted'
     """, (user_id,))
@@ -388,48 +392,84 @@ def list_contacts():
 
     return jsonify({"success": True, "contacts": contacts})
 
-
 @app.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
+    logger.info("Début de la fonction send_message")
+    logger.info(f"Session: {session}")
+    
+    conn = None
+    cursor = None
     try:
         data = request.get_json()
-        receiver_id = data.get('receiver_id')
-        content = data.get('content')
+        logger.info(f"Données reçues: {data}")
+        
+        if not data:
+            logger.error("Données JSON invalides ou manquantes")
+            return jsonify({'success': False, 'error': 'Données JSON invalides'}), 400
 
-        if not receiver_id or not content:
-            return jsonify({'success': False, 'error': 'Données manquantes'})
+        contact_id = data.get('contact_id')
+        message = data.get('message')
 
-        # Vérifier si les utilisateurs sont en contact
+        if not contact_id or not message:
+            logger.error("Contact ID ou message manquant")
+            return jsonify({'success': False, 'error': 'Contact ID et message requis'}), 400
+
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True, buffered=True)  # Utiliser un curseur bufferisé
+        
+        # Vérifier si le contact existe et est accepté
+        cursor.execute('''
+            SELECT status FROM contacts 
+            WHERE (user_id = %s AND contact_id = %s)
+            OR (user_id = %s AND contact_id = %s)
+        ''', (session['user_id'], contact_id, contact_id, session['user_id']))
+        
+        contact = cursor.fetchone()
+        
+        if not contact:
+            logger.error(f"Contact non trouvé: user_id={session['user_id']}, contact_id={contact_id}")
+            return jsonify({'success': False, 'error': 'Contact non trouvé'}), 404
+            
+        if contact['status'] != 'accepted':
+            logger.error(f"Contact non accepté: status={contact['status']}")
+            return jsonify({'success': False, 'error': 'Contact non accepté'}), 403
 
-        cursor.execute("""
-            SELECT * FROM contacts 
-            WHERE ((user_id = %s AND contact_id = %s) OR (user_id = %s AND contact_id = %s))
-            AND status = 'accepted'
-        """, (session['user_id'], receiver_id, receiver_id, session['user_id']))
-
-        if not cursor.fetchone():
-            return jsonify({'success': False, 'error': 'Vous devez être contacts pour envoyer un message'}), 403
-
-# Chiffrer le message avant de l'insérer dans la base de données
-        encrypted_content = encrypt(content)
-        # Insérer le message dans la base de données
-        cursor.execute("""
-            INSERT INTO messages (sender_id, receiver_id, content) 
-            VALUES (%s, %s, %s)
-        """, (session['user_id'], receiver_id, encrypted_content))
+        # Chiffrer le message
+        encrypted_message = encrypt(message)
+        
+        # Insérer le message
+        cursor.execute('''
+            INSERT INTO messages (sender_id, receiver_id, content, created_at)
+            VALUES (%s, %s, %s, NOW())
+        ''', (session['user_id'], contact_id, encrypted_message))
+        
+        # S'assurer qu'il n'y a pas de résultats non lus
+        while cursor.nextset():
+            pass
+            
+        # Important: commit avant de fermer
         conn.commit()
-
-        cursor.close()
-        conn.close()
-
-        return jsonify({'success': True, 'message': 'Message envoyé'})
-    
+        
+        return jsonify({'success': True})
+        
     except Exception as e:
-        logger.error(f"Erreur lors de l'envoi du message: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        logger.error(f"Erreur lors de l'envoi du message: {str(e)}")
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+        
+    finally:
+        if cursor:
+            try:
+                # Consommer tous les résultats restants avant de fermer
+                while cursor.nextset():
+                    pass
+                cursor.close()
+            except Exception as e:
+                logger.error(f"Erreur lors de la fermeture du curseur: {str(e)}")
+        if conn:
+            conn.close()
 
 @app.route('/contacts/pending', methods=['GET'])
 @login_required

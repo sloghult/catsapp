@@ -197,13 +197,16 @@ document.addEventListener("DOMContentLoaded", loadPendingContacts);
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         {% if current_contact %}
-            const messageContainer = document.getElementById('messageContainer');
+            // Initialisation des variables jQuery
             const messageForm = $('#messageForm');
             const messageContent = $('#messageContent');
+            const messageContainer = $('#messageContainer');
             let typingTimeout;
 
             // Faire défiler jusqu'aux derniers messages
-            messageContainer.scrollTop = messageContainer.scrollHeight;
+            if (messageContainer) {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
 
             // Fonction pour recharger les messages
             function reloadMessages() {
@@ -213,73 +216,60 @@ document.addEventListener("DOMContentLoaded", loadPendingContacts);
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, 'text/html');
                         const newMessages = doc.getElementById('messageContainer').innerHTML;
-                        messageContainer.innerHTML = newMessages;
-                        messageContainer.scrollTop = messageContainer.scrollHeight;
-                    });
+                        if (messageContainer) {
+                            messageContainer.innerHTML = newMessages;
+                            messageContainer.scrollTop = messageContainer.scrollHeight;
+                        }
+                    })
+                    .catch(error => console.error('Erreur lors du rechargement des messages:', error));
             }
 
             // Envoyer un message
-            messageForm.on('submit', function(e) {
-                e.preventDefault();
-                const content = messageContent.val().trim();
-                if (content) {
-                    fetch('{{ url_for("send_message") }}', {
+            if (messageForm && messageContent) {
+                messageForm.on('submit', function(e) {
+                    e.preventDefault();
+                    const content = messageContent.val().trim();
+                    if (content) {
+                        fetch('{{ url_for("send_message") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                contact_id: {{ current_contact.id }},
+                                message: content
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                messageContent.val('');
+                                reloadMessages();
+                            } else {
+                                console.error('Erreur:', data.error);
+                            }
+                        })
+                        .catch(error => console.error('Erreur lors de l\'envoi du message:', error));
+                    }
+                });
+
+                // Événement de frappe
+                messageContent.on('input', function() {
+                    clearTimeout(typingTimeout);
+                    fetch('{{ url_for("typing") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            receiver_id: {{ current_contact.id }},
-                            content: content
+                            receiver_id: {{ current_contact.id }}
                         })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            messageContent.val('');
-                            reloadMessages(); // Recharger pour voir le message déchiffré
-                        }
-                    });
-                }
-            });
-
-            // Événement de frappe
-            messageContent.on('input', function() {
-                clearTimeout(typingTimeout);
-                fetch('{{ url_for("typing") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        receiver_id: {{ current_contact.id }}
-                    })
+                    }).catch(error => console.error('Erreur lors de la notification de frappe:', error));
+                    
+                    typingTimeout = setTimeout(() => {
+                        // Le timeout est géré côté serveur
+                    }, 2000);
                 });
-                
-                typingTimeout = setTimeout(() => {
-                    // Le timeout est géré côté serveur
-                }, 2000);
-            });
-
-            // Écouter les événements de socket
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === 'typing' && data.user_id == {{ current_contact.id }}) {
-                    showTypingIndicator();
-                }
-            };
-
-            function showTypingIndicator() {
-                const indicator = document.getElementById('typingIndicator');
-                indicator.style.display = 'block';
-                messageContainer.scrollTop = messageContainer.scrollHeight;
-                
-                
-                // Cacher l'indicateur après 2 secondes
-                setTimeout(() => {
-                    indicator.style.display = 'none';
-                }, 2000);
             }
         {% endif %}
     });
