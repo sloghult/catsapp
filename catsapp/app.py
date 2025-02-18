@@ -333,7 +333,7 @@ def accept_contact():
         return jsonify({"success": False, "message": "ID du contact requis"}), 400
 
     user_id = session['user_id']
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -346,13 +346,22 @@ def accept_contact():
     if not cursor.fetchone():
         return jsonify({"success": False, "message": "Aucune demande en attente trouvée"}), 404
 
-    # Mise à jour du statut
+    # Accepter la demande (Mettre à jour l'entrée existante)
     cursor.execute("""
         UPDATE contacts SET status = 'accepted' 
         WHERE user_id = %s AND contact_id = %s
     """, (contact_id, user_id))
-    conn.commit()
 
+    # Ajouter une entrée réciproque si elle n'existe pas
+    cursor.execute("""
+        INSERT INTO contacts (user_id, contact_id, status) 
+        SELECT %s, %s, 'accepted' FROM DUAL
+        WHERE NOT EXISTS (
+            SELECT 1 FROM contacts WHERE user_id = %s AND contact_id = %s
+        )
+    """, (user_id, contact_id, user_id, contact_id))
+
+    conn.commit()
     cursor.close()
     conn.close()
 
@@ -404,9 +413,8 @@ def send_message():
         if not cursor.fetchone():
             return jsonify({'success': False, 'error': 'Vous devez être contacts pour envoyer un message'}), 403
 
-        # Chiffrer le message avant de l'insérer dans la base de données
+# Chiffrer le message avant de l'insérer dans la base de données
         encrypted_content = encrypt(content)
-        
         # Insérer le message dans la base de données
         cursor.execute("""
             INSERT INTO messages (sender_id, receiver_id, content) 
@@ -477,7 +485,6 @@ def block_contact():
     conn.close()
 
     return jsonify({"success": True, "message": "Contact bloqué"}), 200
-
 
 @app.route('/typing', methods=['POST'])
 @login_required
