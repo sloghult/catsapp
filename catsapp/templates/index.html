@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Clone - Connexion</title>
+    <title>CatsApp</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <div class="login-box">
-            <h1>WhatsApp Clone</h1>
+            <h1>CatsApp</h1>
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
                     {% for message in messages %}
@@ -18,16 +18,14 @@
                 {% endif %}
             {% endwith %}
             <form method="POST" action="{{ url_for('login') }}">
-                <div class="form-group">
+                <div class="form">
                     <input type="text" name="username" placeholder="Nom d'utilisateur" required>
-                </div>
-                <div class="form-group">
                     <input type="password" name="password" placeholder="Mot de passe" required>
                 </div>
-                <button type="submit" class="login-btn">Se connecter</button>
+                <button type="submit">Se connecter</button>
             </form>
             <p class="register-link">
-                Pas encore de compte ? <a href="{{ url_for('register') }}">S'inscrire</a>
+                Pas encore de compte ? <a href="{{ url_for('register') }}">Inscrivez-vous</a>
             </p>
         </div>
     </div>

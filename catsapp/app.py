@@ -159,7 +159,7 @@ def login():
             cursor.close()
             conn.close()
     
-    return render_template('user/login.html')
+    return render_template('/index.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -193,7 +193,7 @@ def register():
             cursor.close()
             conn.close()
     
-    return render_template('user/register.html')
+    return render_template('register.html')
 
 @app.route('/chat')
 @app.route('/chat/<int:contact_id>')

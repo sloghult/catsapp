@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@100..900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Onest", serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #ffffff;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 400px;
+  min-height: 350px;
+  background: rgb(255, 255, 255);
+  padding: 20px 40px;
+  border-radius: 35px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+h1 {
+  font-size: 50px;
+  margin-bottom: 20px;
+  color: rgb(48, 48, 48);
+  cursor: default;
+}
+
+.form {
+  margin-top: 5px;
+}
+
+input, select {
+  padding: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: rgb(48, 48, 48);
+  border: 2px solid rgb(174, 174, 174);
+  border-radius: 25px;
+  margin-bottom: 15px;
+  width: 90%;
+  box-sizing: border-box;
+  transition: all 0.4s ease;
+  background: white;
+  cursor: pointer;
+}
+
+input:focus, select:focus {
+  border-color: rgb(48, 48, 48);
+  outline: none;
+}
+
+button {
+  width: 50%;
+  padding: 13px;
+  margin-top: 8px;
+  font-size: 16px;
+  border: none;
+  border-radius: 25px;
+  background-color: rgb(18, 18, 18);
+  transition: background-color 0.3s ease;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: rgb(45, 45, 45);
+}
+
+.role-select {
+  width: auto;
+  appearance: none;
+  background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="gray"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>') no-repeat right 10px center;
+  background-size: 20px;
+  padding-left: 20px;
+  padding-right: 35px;
+  text-align: center;
+
+}
+
+
+.register-link {
+  margin-top: 10px;
+}
+
+.register-link a {
+  text-decoration: none;
+  color: rgb(48, 48, 48);
+  font-weight: bold;
+  transition: color 0.3s ease;
+  font-size: 18px;
+}
+
+.register-link a:hover {
+  color: rgb(100, 100, 100);
+}
+
