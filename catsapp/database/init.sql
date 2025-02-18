@@ -20,6 +20,17 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sender_id) REFERENCES users(id),
-    FOREIGN KEY (receiver_id) REFERENCES users(id)
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS contacts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    contact_id INT NOT NULL,
+    status ENUM('pending', 'accepted', 'blocked') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (contact_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (user_id, contact_id) -- Empêche les doublons
 );
