@@ -8,6 +8,7 @@ import json
 import threading
 from functools import wraps
 from datetime import datetime
+from encryption import caesar_encrypt, caesar_decrypt
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG)
@@ -227,7 +228,11 @@ def chat(contact_id=None):
                 LIMIT 1
             """, (session['user_id'], contact['id'], contact['id'], session['user_id']))
             last_message = cursor.fetchone()
-            contact['last_message'] = last_message['content'] if last_message else None
+            if last_message:
+                # Déchiffrer le dernier message pour l'aperçu
+                contact['last_message'] = caesar_decrypt(last_message['content'])
+            else:
+                contact['last_message'] = None
 
         # Si un contact est sélectionné, récupérer les messages
         current_contact = None
@@ -246,7 +251,14 @@ def chat(contact_id=None):
                        OR (sender_id = %s AND receiver_id = %s) 
                     ORDER BY created_at
                 """, (session['user_id'], contact_id, contact_id, session['user_id']))
-                messages = cursor.fetchall()
+                encrypted_messages = cursor.fetchall()
+                
+                # Déchiffrer les messages
+                messages = []
+                for msg in encrypted_messages:
+                    decrypted_msg = msg.copy()
+                    decrypted_msg['content'] = caesar_decrypt(msg['content'])
+                    messages.append(decrypted_msg)
         
         return render_template('user/chat.html', 
                              contacts=contacts,

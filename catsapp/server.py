@@ -11,6 +11,16 @@ import queue
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+def caesar_encrypt(text):
+    result = ""
+    for char in text:
+        if char.isalpha():
+            ascii_offset = 65 if char.isupper() else 97
+            result += chr((ord(char) - ascii_offset + 3) % 26 + ascii_offset)
+        else:
+            result += char
+    return result
+
 class ChatServer:
     def __init__(self, host='127.0.0.1', port=5001):
         self.host = host
@@ -120,24 +130,27 @@ class ChatServer:
                         cursor = conn.cursor()
                         
                         try:
+                            # Chiffrer le message avant de le sauvegarder
+                            encrypted_content = caesar_encrypt(message_data['content'])
+                            
                             cursor.execute('''
                                 INSERT INTO messages (sender_id, receiver_id, content, is_read)
                                 VALUES (%s, %s, %s, FALSE)
-                            ''', (message_data['sender_id'], message_data['receiver_id'], message_data['content']))
+                            ''', (message_data['sender_id'], message_data['receiver_id'], encrypted_content))
                             
                             conn.commit()
                             message_id = cursor.lastrowid
                             
-                            # Préparer le message à envoyer
+                            # Préparer le message à envoyer (toujours chiffré)
                             response_message = {
                                 'type': 'new_message',
                                 'message_id': message_id,
                                 'sender_id': message_data['sender_id'],
-                                'content': message_data['content'],
+                                'content': encrypted_content,
                                 'timestamp': datetime.now().isoformat()
                             }
                             
-                            # Envoyer le message au destinataire
+                            # Envoyer le message chiffré au destinataire
                             self.send_to_user(message_data['receiver_id'], response_message)
                             
                             # Envoyer une confirmation à l'expéditeur
@@ -147,7 +160,7 @@ class ChatServer:
                                 'timestamp': datetime.now().isoformat()
                             })
                             
-                            logger.debug(f"Message envoyé et sauvegardé: {message_id}")
+                            logger.debug(f"Message chiffré envoyé et sauvegardé: {message_id}")
                         
                         except Exception as e:
                             logger.error(f"Erreur lors du traitement du message: {e}")
