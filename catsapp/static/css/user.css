@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@100..900&display=swap');
+
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Onest", serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+/* Styles de la navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between; /* Sépare les éléments à gauche et à droite */
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #ffffff;
+}
+
+.navbar1 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+
+.logo img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  
+}
+
+/* Conteneur pour centrer le formulaire */
+.contact-form-container {
+  display: flex;
+  justify-content: center; /* Centre le formulaire */
+  flex-grow: 1; /* Assure que le formulaire prend tout l'espace restant */
+}
+
+.contact-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-form input {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+
+
+.input-field {
+  width: 180px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 25px;
+  border: 2px solid rgb(174, 174, 174);
+  margin-right: 10px;
+  transition: all 0.4s ease;
+}
+
+
+.input-field:focus {
+  border-color: rgb(48, 48, 48); /* Bordure rouge lorsqu'on clique */
+  outline: none; /* Supprime le contour bleu par défaut */
+   /* Ajout d'une légère ombre rouge */
+}
+
+.btn-send {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background-color: #000000;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+
+.material-symbols-outlined:hover {
+	
+}
+
+
+.navbar3 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+}
+
+.btn-settings {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background-color: #000000;
+  color: #fff;
+  cursor: pointer;
+}
+
+.material-symbols-outlined {
+  font-size: 24px;  /* Ajuste la taille de l'icône */
+}
+
+.btn-settings button:hover {
+	
+}

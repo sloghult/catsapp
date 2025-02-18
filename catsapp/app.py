@@ -270,7 +270,12 @@ def chat(contact_id=None):
                     decrypted_msg['content'] = decrypt(msg['content'])
                     messages.append(decrypted_msg)
         
+        # Récupérer l'utilisateur connecté
+        cursor.execute("SELECT id, username FROM users WHERE id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+
         return render_template('user/chat.html', 
+                             user=user,  # Passer l'utilisateur connecté au template
                              contacts=contacts,
                              current_contact=current_contact,
                              messages=messages)
@@ -282,6 +287,7 @@ def chat(contact_id=None):
     finally:
         cursor.close()
         conn.close()
+
 
 @app.route('/contacts/add', methods=['POST'])
 @login_required

@@ -1,277 +1,220 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatsApp - Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=add" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=settings" />
+</head>
+<body>
 
-{% block title %}CatsApp - Chat{% endblock %}
+    {% if session.get('user_id') %}
+    <nav class="navbar">
+        <div class="navbar1">
+            <a href="#" class="logo">
+                <img src="https://ui-avatars.com/api/?name=test&background=random" >
+            </a>
+        </div>
 
-{% block content %}
-<div>
-    <div>
-        <!-- Liste des contacts -->
-        <div class="">
-            <div class="">
-                <div class="">
-                    <h5 class="">Contacts</h5>
-                </div>
-                <div class="">
-                    {% for contact in contacts %}
-                    <a href="{{ url_for('chat', contact_id=contact.id) }}" 
-                       class=" {% if contact.id == current_contact.id %}active{% endif %}">
-                        <div style="display: flex; align-items: center;">
-                            <img src="https://ui-avatars.com/api/?name={{ contact.username }}&background=random" 
-                                 class="rounded-circle me-2" width="40" height="40">
-                            <div>
-                                <h6 class="">{{ contact.username }}</h6>
+        <div class="navbar2">
+            <form id="add-contact-form" class="contact-form">
+                <input type="text" id="contact-username" class="input-field" placeholder="Ajoutez un contact" required>
+                <button type="submit" class="btn-send">
+                    <span class="material-symbols-outlined rotate-90-cw">add</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="navbar3">
+            <div class="btn-settings">
+                <button type="" class="btn-settings">
+                    <span class="material-symbols-outlined rotate-center">settings</span>
+                </button>
+                <a class="nav-link" href="{{ url_for('logout') }}"></a>
+            </div>
+        </div>
+
+    </nav>
+    {% endif %}
+
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <div class="main-container">
+        <p id="add-contact-message" class="success-message"></p>
+        <h3>Demandes de contact</h3>
+        <ul id="pending-contacts"></ul>
+        
+        <div class="sidebar">
+            <h5>Contacts</h5>
+            <div class="list-group">
+                {% for contact in contacts %}
+                    <a href="{{ url_for('chat', contact_id=contact.id) }}" class="list-item {% if contact.id == current_contact.id %}active{% endif %}">
+                        <div class="contact-item">
+                            <img src="https://ui-avatars.com/api/?name={{ contact.username }}&background=random" class="contact-avatar" width="40" height="40">
+                            <div class="contact-info">
+                                <h6>{{ contact.username }}</h6>
                                 {% if contact.last_message %}
-                                <small class="">{{ contact.last_message[:30] }}..</small>
+                                    <small>{{ contact.last_message[:30] }}..</small>
                                 {% endif %}
                             </div>
                         </div>
                     </a>
-                    {% endfor %}
-                </div>
+                {% endfor %}
             </div>
-        </div>
-        
-        <form id="add-contact-form">
-    <input type="text" id="contact-username" placeholder="Nom d'utilisateur" required>
-    <button type="submit">Ajouter</button>
-</form>
-
-<p id="add-contact-message" style="color: green;"></p>
-
-<script>
-document.getElementById("add-contact-form").addEventListener("submit", function(event) {
-    event.preventDefault();
     
-    let username = document.getElementById("contact-username").value;
-
-    fetch('/contacts/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: username })
-    })
-    .then(response => response.json())
-    .then(data => {
-        let messageElem = document.getElementById("add-contact-message");
-        if (data.success) {
-            messageElem.style.color = "green";
-            messageElem.textContent = "Demande envoyée avec succès!";
-        } else {
-            messageElem.style.color = "red";
-            messageElem.textContent = data.message;
-        }
-    })
-    .catch(error => console.error('Erreur:', error));
-});
-</script>
-<h3>Demandes de contact</h3>
-<ul id="pending-contacts">
-    <!-- Les demandes seront ajoutées dynamiquement ici -->
-</ul>
-
-<script>
-function loadPendingContacts() {
-    fetch('/contacts/pending')
-    .then(response => response.json())
-    .then(data => {
-        let list = document.getElementById("pending-contacts");
-        list.innerHTML = "";
-
-        if (data.contacts.length === 0) {
-            list.innerHTML = "<p>Aucune demande en attente</p>";
-        }
-
-        data.contacts.forEach(contact => {
-            let li = document.createElement("li");
-            li.innerHTML = `
-                ${contact.username}
-                <button onclick="acceptContact(${contact.id})">Accepter</button>
-                <button onclick="blockContact(${contact.id})">Bloquer</button>
-            `;
-            list.appendChild(li);
-        });
-    })
-    .catch(error => console.error("Erreur lors du chargement des demandes:", error));
-}
-
-function acceptContact(contactId) {
-    fetch('/contacts/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact_id: contactId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        loadPendingContacts(); // Recharger la liste après acceptation
-    })
-    .catch(error => console.error("Erreur:", error));
-}
-
-function blockContact(contactId) {
-    fetch('/contacts/block', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact_id: contactId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        loadPendingContacts(); // Recharger la liste après blocage
-    })
-    .catch(error => console.error("Erreur:", error));
-}
-
-// Charger les demandes au chargement de la page
-document.addEventListener("DOMContentLoaded", loadPendingContacts);
-</script>
-
+        </div>
+    
         <!-- Zone de chat -->
-        <div class="">
+        <div class="chat-container">
             {% if current_contact %}
-            <div class="">
-                <!-- En-tête du chat -->
-                <div class="">
-                    <div class="">
-                        <img src="https://ui-avatars.com/api/?name={{ current_contact.username }}&background=random" 
-                             class="rounded-circle me-2" width="40" height="40">
-                        <h5 class="">{{ current_contact.username }}</h5>
-                    </div>
+                <div class="chat-header">
+                    <img src="https://ui-avatars.com/api/?name={{ current_contact.username }}&background=random" class="contact-avatar" width="40" height="40">
+                    <h5>{{ current_contact.username }}</h5>
                 </div>
-
-                <!-- Messages -->
-                <div class="" id="messageContainer">
+                <div class="chat-box" id="messageContainer">
                     {% for message in messages %}
                         {% if message.sender_id == session.user_id %}
-                            <div class="">
-                                <div class="">
-                                    {{ message.content }}
-                                </div>
-                                <small class="">{{ message.created_at.strftime('%H:%M') }}</small>
+                            <div class="message text-end">
+                                <div class="message-sender">{{ message.content }}</div>
+                                <small class="message-time">{{ message.created_at.strftime('%H:%M') }}</small>
                             </div>
                         {% else %}
-                            <div class="">
-                                <div class="">
-                                    {{ message.content }}
-                                </div>
-                                <small class="">{{ message.created_at.strftime('%H:%M') }}</small>
+                            <div class="message text-start">
+                                <div class="message-receiver">{{ message.content }}</div>
+                                <small class="message-time">{{ message.created_at.strftime('%H:%M') }}</small>
                             </div>
                         {% endif %}
                     {% endfor %}
-                    <div id="" style="display: none;">
-                        <div class="">
-                            <div class="">
-                                <em>En train d'écrire...</em>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-
+    
                 <!-- Zone de saisie -->
-                <div class="">
-                    <form id="messageForm">
-                        <div class="">
-                            <input type="text" id="messageContent" class="form-control" placeholder="Votre message...">
-                            <button type="submit" class="">
-                                <i class=""></i>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                <form id="messageForm" class="input-container">
+                    <input type="text" id="messageContent" class="input-field" placeholder="Votre message...">
+                    <button type="submit" class="btn-send"><i class="fa fa-paper-plane"></i></button>
+                </form>
             {% else %}
-            <div class="">
-                <div class="">
-                    <i class=""></i>
-                    <p class="">Sélectionnez un contact pour commencer à chatter</p>
+                <div class="no-contact-message">
+                    <p class="text-muted">Sélectionnez un contact pour commencer à chatter</p>
                 </div>
-            </div>
             {% endif %}
         </div>
     </div>
-</div>
-{% endblock %}
+    
 
-{% block scripts %}
+
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        {% if current_contact %}
-            // Initialisation des variables jQuery
-            const messageForm = $('#messageForm');
-            const messageContent = $('#messageContent');
-            const messageContainer = $('#messageContainer');
-            let typingTimeout;
+    document.getElementById("add-contact-form").addEventListener("submit", function(event) {
+        event.preventDefault();
+        let username = document.getElementById("contact-username").value;
 
-            // Faire défiler jusqu'aux derniers messages
-            if (messageContainer) {
-                messageContainer.scrollTop = messageContainer.scrollHeight;
-            }
-
-            // Fonction pour recharger les messages
-            function reloadMessages() {
-                fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
-                    .then(response => response.text())
-                    .then(html => {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const newMessages = doc.getElementById('messageContainer').innerHTML;
-                        if (messageContainer) {
-                            messageContainer.innerHTML = newMessages;
-                            messageContainer.scrollTop = messageContainer.scrollHeight;
-                        }
-                    })
-                    .catch(error => console.error('Erreur lors du rechargement des messages:', error));
-            }
-
-            // Envoyer un message
-            if (messageForm && messageContent) {
-                messageForm.on('submit', function(e) {
-                    e.preventDefault();
-                    const content = messageContent.val().trim();
-                    if (content) {
-                        fetch('{{ url_for("send_message") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                contact_id: {{ current_contact.id }},
-                                message: content
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                messageContent.val('');
-                                reloadMessages();
-                            } else {
-                                console.error('Erreur:', data.error);
-                            }
-                        })
-                        .catch(error => console.error('Erreur lors de l\'envoi du message:', error));
-                    }
-                });
-
-                // Événement de frappe
-                messageContent.on('input', function() {
-                    clearTimeout(typingTimeout);
-                    fetch('{{ url_for("typing") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            receiver_id: {{ current_contact.id }}
-                        })
-                    }).catch(error => console.error('Erreur lors de la notification de frappe:', error));
-                    
-                    typingTimeout = setTimeout(() => {
-                        // Le timeout est géré côté serveur
-                    }, 2000);
-                });
-            }
-        {% endif %}
+        fetch('/contacts/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username })
+        })
+        .then(response => response.json())
+        .then(data => {
+            let messageElem = document.getElementById("add-contact-message");
+            messageElem.style.color = data.success ? "green" : "red";
+            messageElem.textContent = data.message;
+        })
+        .catch(error => console.error('Erreur:', error));
     });
+
+    function loadPendingContacts() {
+        fetch('/contacts/pending')
+        .then(response => response.json())
+        .then(data => {
+            let list = document.getElementById("pending-contacts");
+            list.innerHTML = data.contacts.length === 0 ? "<p>Aucune demande en attente</p>" : "";
+            data.contacts.forEach(contact => {
+                let li = document.createElement("li");
+                li.innerHTML = `${contact.username}
+                    <button onclick="acceptContact(${contact.id})">Accepter</button>
+                    <button onclick="blockContact(${contact.id})">Bloquer</button>`;
+                list.appendChild(li);
+            });
+        })
+        .catch(error => console.error("Erreur lors du chargement des demandes:", error));
+    }
+
+    function acceptContact(contactId) {
+        fetch('/contacts/accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contact_id: contactId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadPendingContacts();
+        })
+        .catch(error => console.error("Erreur:", error));
+    }
+
+    function blockContact(contactId) {
+        fetch('/contacts/block', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contact_id: contactId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadPendingContacts();
+        })
+        .catch(error => console.error("Erreur:", error));
+    }
+
+    document.addEventListener("DOMContentLoaded", loadPendingContacts);
+
+    {% if current_contact %}
+    const messageForm = document.getElementById("messageForm");
+    const messageContent = document.getElementById("messageContent");
+    const messageContainer = document.getElementById("messageContainer");
+
+    function reloadMessages() {
+        fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
+        .then(response => response.text())
+        .then(html => {
+            let parser = new DOMParser();
+            let doc = parser.parseFromString(html, 'text/html');
+            messageContainer.innerHTML = doc.getElementById('messageContainer').innerHTML;
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        })
+        .catch(error => console.error('Erreur:', error));
+    }
+
+    messageForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+        let content = messageContent.value.trim();
+        if (content) {
+            fetch('{{ url_for("send_message") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contact_id: {{ current_contact.id }}, message: content })
+            }).then(response => response.json())
+            .then(() => {
+                messageContent.value = '';
+                reloadMessages();
+            }).catch(error => console.error('Erreur:', error));
+        }
+    });
+    {% endif %}
 </script>
-{% endblock %}
+
+</body>
+</html>
