@@ -6,6 +6,7 @@ from database.db import DB_CONFIG
 import logging
 from datetime import datetime
 import queue
+from encryption import encrypt, decrypt
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG)
@@ -131,7 +132,7 @@ class ChatServer:
                         
                         try:
                             # Chiffrer le message avant de le sauvegarder
-                            encrypted_content = caesar_encrypt(message_data['content'])
+                            encrypted_content = encrypt(message_data['content'])
                             
                             cursor.execute('''
                                 INSERT INTO messages (sender_id, receiver_id, content, is_read)

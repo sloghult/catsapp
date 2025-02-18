@@ -1,4 +1,4 @@
-def caesar_encrypt(text, shift=3):
+def encrypt(text, shift=3):
     """Chiffre un texte en utilisant le chiffrement de César."""
     encrypted = ""
     for char in text:
@@ -9,6 +9,6 @@ def caesar_encrypt(text, shift=3):
             encrypted += char
     return encrypted
 
-def caesar_decrypt(text, shift=3):
+def decrypt(text, shift=3):
     """Déchiffre un texte chiffré avec le chiffrement de César."""
-    return caesar_encrypt(text, -shift)  # Le déchiffrement est un chiffrement avec un décalage négatif
+    return encrypt(text, -shift)  # Le déchiffrement est un chiffrement avec un décalage négatif
