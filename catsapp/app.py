@@ -100,18 +100,23 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            logger.debug(f"Pas d'user_id dans la session: {session}")
             flash('Veuillez vous connecter d\'abord.', 'error')
             return redirect(url_for('login'))
         
         # Vérifier si l'utilisateur est admin
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT username FROM users WHERE id = %s', (session['user_id'],))
+        cursor.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
         
-        if not user or user['username'] != 'admin':
+        logger.debug(f"User trouvé dans la DB: {user}")
+        logger.debug(f"Session actuelle: {session}")
+        
+        if not user or user['username'].lower() != 'admin':
+            logger.debug(f"Utilisateur non admin: username={user['username'] if user else 'None'}")
             flash('Accès non autorisé.', 'error')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
@@ -338,7 +343,7 @@ def admin_dashboard():
         
         # Récupérer tous les utilisateurs sauf l'admin
         cursor.execute("""
-            SELECT id, username, is_admin, created_at 
+            SELECT id, username, nom, prenom, created_at 
             FROM users 
             WHERE id != %s
             ORDER BY created_at DESC
@@ -349,7 +354,7 @@ def admin_dashboard():
         return render_template('admin/admin_dashboard.html', users=users)
     except Exception as e:
         logger.error(f"Erreur dans le dashboard admin: {e}")
-        flash('Une erreur est survenue')
+        flash('Une erreur est survenue', 'error')
         return redirect(url_for('index'))
     finally:
         cursor.close()
@@ -472,6 +477,29 @@ def logout():
     
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/check_admin_status')
+@login_required
+def check_admin_status():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'is_logged_in': True,
+            'session_user_id': session.get('user_id'),
+            'session_username': session.get('username'),
+            'db_user': user
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'session': dict(session)
+        })
 
 if __name__ == '__main__':
     # Initialiser la base de données au démarrage
