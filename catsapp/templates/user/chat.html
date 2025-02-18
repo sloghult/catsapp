@@ -30,6 +30,102 @@
                 </div>
             </div>
         </div>
+        
+        <form id="add-contact-form">
+    <input type="text" id="contact-username" placeholder="Nom d'utilisateur" required>
+    <button type="submit">Ajouter</button>
+</form>
+
+<p id="add-contact-message" style="color: green;"></p>
+
+<script>
+document.getElementById("add-contact-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    
+    let username = document.getElementById("contact-username").value;
+
+    fetch('/contacts/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username: username })
+    })
+    .then(response => response.json())
+    .then(data => {
+        let messageElem = document.getElementById("add-contact-message");
+        if (data.success) {
+            messageElem.style.color = "green";
+            messageElem.textContent = "Demande envoyée avec succès!";
+        } else {
+            messageElem.style.color = "red";
+            messageElem.textContent = data.message;
+        }
+    })
+    .catch(error => console.error('Erreur:', error));
+});
+</script>
+<h3>Demandes de contact</h3>
+<ul id="pending-contacts">
+    <!-- Les demandes seront ajoutées dynamiquement ici -->
+</ul>
+
+<script>
+function loadPendingContacts() {
+    fetch('/contacts/pending')
+    .then(response => response.json())
+    .then(data => {
+        let list = document.getElementById("pending-contacts");
+        list.innerHTML = "";
+
+        if (data.contacts.length === 0) {
+            list.innerHTML = "<p>Aucune demande en attente</p>";
+        }
+
+        data.contacts.forEach(contact => {
+            let li = document.createElement("li");
+            li.innerHTML = `
+                ${contact.username}
+                <button onclick="acceptContact(${contact.id})">Accepter</button>
+                <button onclick="blockContact(${contact.id})">Bloquer</button>
+            `;
+            list.appendChild(li);
+        });
+    })
+    .catch(error => console.error("Erreur lors du chargement des demandes:", error));
+}
+
+function acceptContact(contactId) {
+    fetch('/contacts/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadPendingContacts(); // Recharger la liste après acceptation
+    })
+    .catch(error => console.error("Erreur:", error));
+}
+
+function blockContact(contactId) {
+    fetch('/contacts/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact_id: contactId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadPendingContacts(); // Recharger la liste après blocage
+    })
+    .catch(error => console.error("Erreur:", error));
+}
+
+// Charger les demandes au chargement de la page
+document.addEventListener("DOMContentLoaded", loadPendingContacts);
+</script>
 
         <!-- Zone de chat -->
         <div class="">

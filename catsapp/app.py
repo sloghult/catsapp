@@ -209,11 +209,12 @@ def chat(contact_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Récupérer tous les contacts (sauf l'utilisateur actuel)
+        # Récupère les contacts de l'utilisateur
         cursor.execute("""
-            SELECT id, username 
-            FROM users 
-            WHERE id != %s
+            SELECT users.id, users.username 
+            FROM contacts
+            JOIN users ON contacts.contact_id = users.id
+            WHERE contacts.user_id = %s AND contacts.status = 'accepted'
         """, (session['user_id'],))
         contacts = cursor.fetchall()
         
@@ -238,8 +239,13 @@ def chat(contact_id=None):
         current_contact = None
         messages = []
         if contact_id:
-            # Récupérer les informations du contact
-            cursor.execute("SELECT id, username FROM users WHERE id = %s", (contact_id,))
+            # Vérifier que l'utilisateur sélectionné est bien un contact accepté
+            cursor.execute("""
+                SELECT users.id, users.username FROM contacts
+                JOIN users ON contacts.contact_id = users.id
+                WHERE contacts.user_id = %s AND contacts.contact_id = %s AND contacts.status = 'accepted'
+            """, (session['user_id'], contact_id))
+    
             current_contact = cursor.fetchone()
             
             if current_contact:
@@ -273,6 +279,107 @@ def chat(contact_id=None):
         cursor.close()
         conn.close()
 
+@app.route('/contacts/add', methods=['POST'])
+@login_required
+def add_contact():
+    data = request.get_json()
+    contact_username = data.get('username')
+
+    if not contact_username:
+        return jsonify({"success": False, "message": "Nom d'utilisateur requis"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Vérifier si l'utilisateur existe
+    cursor.execute("SELECT id FROM users WHERE username = %s", (contact_username,))
+    contact = cursor.fetchone()
+
+    if not contact:
+        return jsonify({"success": False, "message": "Utilisateur non trouvé"}), 404
+
+    contact_id = contact['id']
+    user_id = session['user_id']
+
+    if user_id == contact_id:
+        return jsonify({"success": False, "message": "Vous ne pouvez pas vous ajouter vous-même"}), 400
+
+    # Vérifier si une relation existe déjà
+    cursor.execute("""
+        SELECT * FROM contacts 
+        WHERE (user_id = %s AND contact_id = %s) OR (user_id = %s AND contact_id = %s)
+    """, (user_id, contact_id, contact_id, user_id))
+    
+    if cursor.fetchone():
+        return jsonify({"success": False, "message": "Demande déjà envoyée ou contact existant"}), 400
+
+    # Insérer la demande de contact
+    cursor.execute("INSERT INTO contacts (user_id, contact_id, status) VALUES (%s, %s, 'pending')", (user_id, contact_id))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+    
+    return jsonify({"success": True, "message": "Demande de contact envoyée"}), 201
+
+
+@app.route('/contacts/accept', methods=['POST'])
+@login_required
+def accept_contact():
+    data = request.get_json()
+    contact_id = data.get('contact_id')
+
+    if not contact_id:
+        return jsonify({"success": False, "message": "ID du contact requis"}), 400
+
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Vérifier si une demande est en attente
+    cursor.execute("""
+        SELECT * FROM contacts 
+        WHERE user_id = %s AND contact_id = %s AND status = 'pending'
+    """, (contact_id, user_id))
+
+    if not cursor.fetchone():
+        return jsonify({"success": False, "message": "Aucune demande en attente trouvée"}), 404
+
+    # Mise à jour du statut
+    cursor.execute("""
+        UPDATE contacts SET status = 'accepted' 
+        WHERE user_id = %s AND contact_id = %s
+    """, (contact_id, user_id))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({"success": True, "message": "Contact accepté"}), 200
+
+
+@app.route('/contacts/list', methods=['GET'])
+@login_required
+def list_contacts():
+    user_id = session['user_id']
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT users.id, users.username FROM contacts
+        JOIN users ON contacts.contact_id = users.id
+        WHERE contacts.user_id = %s AND contacts.status = 'accepted'
+    """, (user_id,))
+
+    contacts = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"success": True, "contacts": contacts})
+
+
 @app.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
@@ -280,37 +387,94 @@ def send_message():
         data = request.get_json()
         receiver_id = data.get('receiver_id')
         content = data.get('content')
-        
+
         if not receiver_id or not content:
             return jsonify({'success': False, 'error': 'Données manquantes'})
-        
-        # Obtenir le socket client
-        client_socket = get_socket_client(session['user_id'])
-        if not client_socket:
-            return jsonify({'success': False, 'error': 'Impossible de se connecter au serveur de chat'})
-        
-        # Envoyer le message via le socket
-        message_data = {
-            'type': 'message',
-            'sender_id': session['user_id'],
-            'receiver_id': int(receiver_id),
-            'content': content
-        }
-        
-        try:
-            client_socket.send(json.dumps(message_data).encode('utf-8'))
-            return jsonify({'success': True})
-        except Exception as e:
-            logger.error(f"Erreur lors de l'envoi du message: {e}")
-            # Supprimer le socket en cas d'erreur pour forcer une nouvelle connexion
-            with socket_lock:
-                if session['user_id'] in socket_clients:
-                    del socket_clients[session['user_id']]
-            return jsonify({'success': False, 'error': 'Erreur lors de l\'envoi du message'})
-        
+
+        # Vérifier si les utilisateurs sont en contact
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM contacts 
+            WHERE ((user_id = %s AND contact_id = %s) OR (user_id = %s AND contact_id = %s))
+            AND status = 'accepted'
+        """, (session['user_id'], receiver_id, receiver_id, session['user_id']))
+
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Vous devez être contacts pour envoyer un message'}), 403
+
+        # Insérer le message dans la base de données
+        cursor.execute("""
+            INSERT INTO messages (sender_id, receiver_id, content) 
+            VALUES (%s, %s, %s)
+        """, (session['user_id'], receiver_id, content))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Message envoyé'})
+    
     except Exception as e:
         logger.error(f"Erreur lors de l'envoi du message: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/contacts/pending', methods=['GET'])
+@login_required
+def pending_contacts():
+    user_id = session['user_id']
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT users.id, users.username 
+        FROM contacts
+        JOIN users ON contacts.user_id = users.id
+        WHERE contacts.contact_id = %s AND contacts.status = 'pending'
+    """, (user_id,))
+
+    contacts = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"success": True, "contacts": contacts})
+
+@app.route('/contacts/block', methods=['POST'])
+@login_required
+def block_contact():
+    data = request.get_json()
+    contact_id = data.get('contact_id')
+
+    if not contact_id:
+        return jsonify({"success": False, "message": "ID du contact requis"}), 400
+
+    user_id = session['user_id']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Vérifier si une demande existe
+    cursor.execute("""
+        SELECT * FROM contacts WHERE user_id = %s AND contact_id = %s
+    """, (contact_id, user_id))
+
+    if not cursor.fetchone():
+        return jsonify({"success": False, "message": "Aucune demande trouvée"}), 404
+
+    # Mettre à jour le statut à "blocked"
+    cursor.execute("""
+        UPDATE contacts SET status = 'blocked' 
+        WHERE user_id = %s AND contact_id = %s
+    """, (contact_id, user_id))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({"success": True, "message": "Contact bloqué"}), 200
+
 
 @app.route('/typing', methods=['POST'])
 @login_required
