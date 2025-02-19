@@ -10,6 +10,11 @@
   font-style: normal;
 }
 
+body, html {
+  overflow: hidden; /* Empêche le débordement global */
+  height: 100%;
+}
+
 /* Styles de la navbar */
 .navbar {
   display: flex;
@@ -130,7 +135,7 @@
 
 .input-field-chat {
   width: 300px;
-  padding: 8px;
+  padding: 12px;
   font-size: 16px;
   border-radius: 25px;
   border: 2px solid #ddd;
@@ -145,8 +150,14 @@
 }
 
 .main-container {
+  height: 100vh; /* Utilisez 100vh pour occuper toute la hauteur de la fenêtre */
+  overflow: hidden;
   display: flex;
   height: 91vh;
+}
+
+.sidebar, .chat-container {
+  height: 100%; /* Assurez-vous que les éléments enfants occupent toute la hauteur */
 }
 
 .sidebar {
@@ -160,14 +171,13 @@
 
 .contact-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
   position: relative;
 }
 
 .contact-header h4 {
-  margin: 0;
+  margin-right: 13px;
   font-size: 32px;
   color: rgb(48, 48, 48);
 }
@@ -229,6 +239,19 @@
   color: #b4b4b4;
 }
 
+.pending-contacts-card {
+  background-color: #202020;
+  color: #fff;
+  border-radius: 20px;
+  padding: 15px;
+  margin: 0px 5px 10px 5px
+}
+
+.contacts-list {
+  overflow-y: auto;
+  max-height: calc(100vh - 300px); /* Ajustez cette valeur selon vos besoins */
+}
+
 .sidebar.collapsed {
   width: 0;
   border: none;
@@ -280,11 +303,11 @@
 }
 
 .chat-box {
+  height: calc(100% - 100px);
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   overflow-y: auto;
-  margin-bottom: 20px;
   scrollbar-width: none; /* Pour Firefox */
   -ms-overflow-style: none; /* Pour Internet Explorer et Edge */
   border-width: 10px;
@@ -315,7 +338,41 @@
   transition: all 0.4s;
 }
 
+.btn-send-chat {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 50%;
+  background-color: #202020;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+
+
+
 .btn-send:hover {
+  background-color: rgb(45, 45, 45);
+}
+
+.btn-add {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background-color: #202020;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+
+.btn-add:hover {
   background-color: rgb(45, 45, 45);
 }
 
@@ -356,9 +413,17 @@
 .message-time {
   font-size: 12px;
   color: #999;
-  margin-top: 8px;
-  margin-right: 25px;
+  margin-top: 6px;
+  margin-right: 6px;
   text-align: end;
+}
+
+.message-time-received {
+  font-size: 12px;
+  color: #999;
+  margin-top: 6px;
+  margin-left: 6px;
+  text-align: start;
 }
 
 /* Styles communs pour les boutons avec icônes */
@@ -401,8 +466,8 @@
 
 @media (max-width: 1560px) {
   .contact-header {
-    flex-direction: column;
-    align-items: start;
+    flex-direction: row; /* Garde le bouton à côté du titre */
+    align-items: center;
   }
 
   .contact-form {
@@ -426,10 +491,87 @@
   .chat-container {
     width: 100%; /* Étendre le conteneur de chat pour occuper tout l'espace */
   }
-  .list-group {
-    padding-left: 35vh;
-    padding-right: 35vh;
+  .contacts-list {
+    padding-left: 15vh;
+    padding-right: 15vh;
   }
 
+  .pending-contacts {
+    margin-left: 15vh;
+    margin-right: 15vh;
+  }
 }
 
+
+@media (max-width: 768px) {
+  .contacts-list {
+    padding-left: 7vh;
+    padding-right: 7vh;
+  }
+
+  .pending-contacts{
+    margin-left: 7vh;
+    margin-right: 7vh;
+  }
+}
+
+
+@media (max-width: 425px) {
+  .contacts-list {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .pending-contacts {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+.popup {
+  display: none;
+  position: fixed;
+  z-index: 99;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.popup-content {
+  background-color: #fff;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 340px;
+  min-height: 140px;
+  border-radius: 20px;
+  position: relative;
+}
+
+
+.popup-content h4 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #202020;
+}
+
+
+span.material-symbols-outlined.popup-close-btn {
+  color: #202020;
+  font-size: 24px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  transition: all 0.4s;
+}
+
+span.material-symbols-outlined.popup-close-btn:hover {
+  color: #999;
+  
+}

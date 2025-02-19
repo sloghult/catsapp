@@ -19,7 +19,7 @@
         </div>
 
         <div class="navbar2">
-            
+
         </div>
 
         <div class="navbar3">
@@ -37,79 +37,41 @@
     </nav>
     {% endif %}
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            var toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
-            var sidebar = document.querySelector(".sidebar");
-            var chatContainer = document.querySelector(".chat-container");
-
-            toggleSidebarBtn.addEventListener("click", function() {
-                if (window.innerWidth <= 1050) {
-                    sidebar.classList.toggle("show");
-                    if (sidebar.classList.contains("show")) {
-                        chatContainer.style.display = "none";
-                    } else {
-                        chatContainer.style.display = "flex";
-                    }
-                } else {
-                    sidebar.classList.toggle("collapsed");
-                    chatContainer.classList.toggle("expanded");
-                }
-            });
-
-            window.addEventListener("resize", function() {
-                if (window.innerWidth > 1050) {
-                    sidebar.classList.remove("show");
-                    chatContainer.style.display = "flex";
-                }
-            });
-        });
-
-        function toggleMenu() {
-            var menu = document.getElementById("settingsMenu");
-            var icon = document.getElementById("settingsIcon");
-            menu.classList.toggle("active");
-            icon.classList.toggle("rotate-30");
-        }
-
-        document.addEventListener("click", function(event) {
-            var settingsBtn = document.querySelector(".btn-settings");
-            var menu = document.getElementById("settingsMenu");
-            var icon = document.getElementById("settingsIcon");
-
-            if (!settingsBtn.contains(event.target)) {
-                menu.classList.remove("active");
-                icon.classList.remove("rotate-30");
-            }
-        });
-
-    </script>
-
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
-    
-
     <div class="main-container">
         <div class="sidebar">
             <div class="contact-header">
                 <h4>Contacts</h4>
-                <form id="add-contact-form" class="contact-form">
-                    <input type="text" id="contact-username" class="input-field" required>
-                    <button type="submit" class="btn-send plus-icon">
-                        <span class="material-symbols-outlined" id="plusIcon">add</span>
-                    </button>
-                </form>
-            </div>            
-            <div class="list-group">
+                <button id="addContactBtn" class="btn-add plus-icon">
+                    <span class="material-symbols-outlined" id="plusIcon">add</span>
+                </button>
+            </div>
+
+            <!-- Popup pour ajouter un contact -->
+            <div id="addContactPopup" class="popup">
+                <div class="popup-content">
+                    <span class="material-symbols-outlined popup-close-btn" onclick="closePopup()">close</span>
+                    <h4>Ajouter un contact</h4>
+                    <form id="add-contact-form" class="contact-form">
+                        <input type="text" id="contact-username" class="input-field" placeholder="pierre" required>
+                        <button type="submit" class="btn-send">
+                            <span class="material-symbols-outlined">send</span>
+                        </button>
+                    </form>
+                    <p id="add-contact-message" class="success-message"></p>
+                </div>
+            </div>
+
+            <!-- Carte Demandes de contact -->
+            <div class="pending-contacts">
+                <div class="pending-contacts-card">
+                    <h3>Demandes de contact</h3>
+                    <ul id="pending-contacts"></ul>
+                </div>
+            </div>
+            
+
+            <!-- Liste des contacts -->
+            <div class="contacts-list">
                 {% for contact in contacts %}
                     <a href="{{ url_for('chat', contact_id=contact.id) }}" class="list-item {% if contact.id == current_contact.id %}active{% endif %}">
                         <div class="contact-item">
@@ -123,13 +85,9 @@
                         </div>
                     </a>
                 {% endfor %}
-                <p id="add-contact-message" class="success-message"></p>
-                <h3>Demandes de contact</h3>
-                <ul id="pending-contacts"></ul>
             </div>
         </div>
-        
-    
+
         <!-- Zone de chat -->
         <div class="chat-container">
             {% if current_contact %}
@@ -138,7 +96,6 @@
                         <img src="https://ui-avatars.com/api/?name={{ current_contact.username }}&background=random" class="contact-avatar" width="50" height="50">
                         <h5>{{ current_contact.username }}</h5>
                     </div>
-                    
                 </div>
                 <div class="chat-box" id="messageContainer">
                     {% for message in messages %}
@@ -151,17 +108,17 @@
                         {% else %}
                             <div class="message message-received">
                                 <div class="message-content">{{ message.content }}</div>
-                                <small class="message-time">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <small class="message-time-received">{{ message.created_at.strftime('%H:%M') }}</small>
                             </div>
                         {% endif %}
                     {% endfor %}
                 </div>
-    
+
                 <!-- Zone de saisie -->
                 <form id="messageForm" class="input-container">
                     <input type="text" id="messageContent" class="input-field-chat" placeholder="Entrer un message..">
-                    <button type="submit" class="btn-send">
-                        <span class="material-symbols-outlined">send</span>
+                    <button type="submit" class="btn-send-chat">
+                        <span style="font-size: 30px; margin-left: 3px;" class="material-symbols-outlined">send</span>
                     </button>
                 </form>
             {% else %}
@@ -172,8 +129,65 @@
             {% endif %}
         </div>
     </div>
-
     
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
+            var sidebar = document.querySelector(".sidebar");
+            var chatContainer = document.querySelector(".chat-container");
+            var addContactBtn = document.getElementById("addContactBtn");
+            var addContactPopup = document.getElementById("addContactPopup");
+    
+            toggleSidebarBtn.addEventListener("click", function() {
+                if (window.innerWidth <= 1050) {
+                    sidebar.classList.toggle("show");
+                    if (sidebar.classList.contains("show")) {
+                        chatContainer.style.display = "none";
+                    } else {
+                        chatContainer.style.display = "flex";
+                    }
+                } else {
+                    sidebar.classList.toggle("collapsed");
+                    chatContainer.classList.toggle("expanded");
+                }
+            });
+    
+            window.addEventListener("resize", function() {
+                if (window.innerWidth > 1050) {
+                    sidebar.classList.remove("show");
+                    chatContainer.style.display = "flex";
+                }
+            });
+    
+            addContactBtn.addEventListener("click", function() {
+                addContactPopup.style.display = "block";
+            });
+        });
+    
+        function toggleMenu() {
+            var menu = document.getElementById("settingsMenu");
+            var icon = document.getElementById("settingsIcon");
+            menu.classList.toggle("active");
+            icon.classList.toggle("rotate-30");
+        }
+    
+        function closePopup() {
+            var addContactPopup = document.getElementById("addContactPopup");
+            addContactPopup.style.display = "none";
+        }
+    
+        document.addEventListener("click", function(event) {
+            var settingsBtn = document.querySelector(".btn-settings");
+            var menu = document.getElementById("settingsMenu");
+            var icon = document.getElementById("settingsIcon");
+    
+            if (!settingsBtn.contains(event.target)) {
+                menu.classList.remove("active");
+                icon.classList.remove("rotate-30");
+            }
+        });
+    </script>
     
 
 
