@@ -43,8 +43,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border: none;
   border-radius: 50%;
   background-color: #202020;
@@ -365,8 +365,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border: none;
   border-radius: 50%;
   background-color: #202020;
@@ -396,4 +396,18 @@
 
 .no-contact-message p {
   font-size: 1.2rem;
+}
+
+
+@media (max-width: 1455px) {
+  .contact-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .contact-form {
+      margin-top: 10px;
+      width: 100%;
+      justify-content: start;
+  }
 }
