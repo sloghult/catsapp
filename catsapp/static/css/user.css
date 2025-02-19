@@ -13,7 +13,7 @@
 /* Styles de la navbar */
 .navbar {
   display: flex;
-  justify-content: space-between; /* Sépare les éléments à gauche et à droite */
+  justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
   background-color: #ffffff;
@@ -22,28 +22,14 @@
 .navbar1 {
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
-
-.logo {
-  display: flex;
-  align-items: center;
+.toggle-sidebar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
 }
-
-
-.logo img {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  object-fit: cover;
-  
-}
-
-
-
-
-
 
 .navbar3 {
   display: flex;
@@ -61,7 +47,7 @@
   height: 40px;
   border: none;
   border-radius: 50%;
-  background-color: #000000;
+  background-color: #202020;
   color: #fff;
   cursor: pointer;
   position: relative;
@@ -111,7 +97,7 @@
   padding: 10px 13px;
   text-decoration: none;
   color: #ffffff;
-  background-color: #000000;
+  background-color: #202020;
   border-radius: 25px;
   transition: all 0.4s;
 }
@@ -120,37 +106,198 @@
   background-color: rgb(45, 45, 45);
 }
 
-.contact-form-container {
-  display: flex;
-  justify-content: center;
-  flex-grow: 1;
-}
-
 .contact-form {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.contact-form input {
-  text-align: center;
-  font-size: 16px;
-  font-weight: bold;
+  position: relative;
 }
 
 .input-field {
   width: 180px;
-  padding: 10px;
+  padding: 8px;
   font-size: 16px;
   border-radius: 25px;
   border: 2px solid rgb(48, 48, 48);
   margin-right: 10px;
   transition: all 0.4s ease;
+  font-weight: bold;
 }
 
 .input-field:focus {
-  border-color: rgb(174, 174, 174);
   outline: none;
+}
+
+.input-field-chat {
+  width: 300px;
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 25px;
+  border: 2px solid #ddd;
+  margin-right: 10px;
+  transition: all 0.4s ease;
+  font-weight: bold;
+}
+
+.input-field-chat:focus {
+  border-color: rgb(48, 48, 48);
+  outline: none;
+}
+
+.main-container {
+  display: flex;
+  height: 91vh;
+}
+
+.sidebar {
+  width: 30%;
+  border-right: 2px solid rgb(48, 48, 48);
+  padding: 20px;
+  overflow-y: auto;
+  transition: width 0.3s;
+  background-color: #fff;
+}
+
+.contact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+}
+
+.contact-header h4 {
+  margin: 0;
+  font-size: 32px;
+  color: rgb(48, 48, 48);
+}
+
+.list-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 2px solid rgb(48, 48, 48);
+  border-radius: 20px;
+  background-color: #fff;
+  transition: background-color 0.3s, transform 0.3s;
+  margin: 5px;
+  text-decoration: none;
+}
+
+.list-item:hover {
+  transform: translateX(5px);
+}
+
+.list-item.active {
+  background-color: #202020;
+  border: none;
+}
+
+.list-item.active .contact-info h6 {
+  color: #fff;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.contact-avatar {
+  border-radius: 16px;
+  margin-right: 15px;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-info h6 {
+  margin-bottom: 4px;
+  font-size: 18px;
+  color: #202020;
+}
+
+.contact-info small {
+  font-size: 14px;
+  color: #b4b4b4;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+.chat-container {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  padding-top: 25px;
+  padding-bottom: 20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  transition: width 0.3s;
+}
+
+.chat-container.expanded {
+  width: 100%;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 20px;
+}
+
+.chat-user-card {
+  display: flex;
+  align-items: center;
+  background-color: #202020;
+  color: #fff;
+  padding: 15px;
+  border-radius: 20px;
+  transition: background-color 0.3s, transform 0.3s;
+  margin: 5px;
+}
+
+.chat-user-card img {
+  border-radius: 16px;
+  margin-right: 15px;
+}
+
+.chat-user-card h5 {
+  font-size: 1.2rem;
+  border-bottom: 2px solid #fff;
+  cursor: default;
+}
+
+.chat-box {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  scrollbar-width: none; /* Pour Firefox */
+  -ms-overflow-style: none; /* Pour Internet Explorer et Edge */
+  border-width: 10px;
+}
+
+.chat-box::-webkit-scrollbar {
+  display: none; /* Pour Chrome, Safari et Opera */
+}
+
+/* Styles pour centrer le formulaire et l'icône */
+.input-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-send {
@@ -161,8 +308,92 @@
   height: 40px;
   border: none;
   border-radius: 50%;
-  background-color: #000000;
+  background-color: #202020;
   color: #fff;
   cursor: pointer;
   transition: all 0.4s;
+}
+
+.btn-send:hover {
+  background-color: rgb(45, 45, 45);
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  max-width: 70%;
+}
+
+.message-sent {
+  align-self: flex-end;
+  margin-bottom: 15px;
+}
+
+.message-received {
+  align-self: flex-start;
+  margin-bottom: 15px;
+}
+
+.message-content {
+  padding: 12px;
+  border-radius: 15px;
+  position: relative;
+  word-wrap: break-word; /* Ajoutez cette ligne */
+}
+
+.message-sent .message-content {
+  background-color: #202020;
+  color: #fff;
+}
+
+.message-received .message-content {
+  background-color: #fff;
+  border: 2px solid #ddd;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+  margin-right: 25px;
+  text-align: end;
+}
+
+/* Styles communs pour les boutons avec icônes */
+.btn-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background-color: #202020;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+
+.btn-icon:hover {
+  background-color: rgb(45, 45, 45);
+}
+
+/* Styles pour centrer le message "Sélectionnez un contact pour commencer à chatter" */
+.no-contact-message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+}
+
+.no-contact-message h1 {
+  font-size: 4rem;
+  margin-bottom: 10px;
+}
+
+.no-contact-message p {
+  font-size: 1.2rem;
 }
