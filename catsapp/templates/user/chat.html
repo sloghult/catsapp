@@ -21,24 +21,48 @@
         <div class="navbar2">
             <form id="add-contact-form" class="contact-form">
                 <input type="text" id="contact-username" class="input-field" placeholder="Ajoutez un contact" required>
-                <button type="submit" class="btn-send">
-                    <span class="material-symbols-outlined rotate-90-cw">add</span>
+                <button type="submit" class="btn-send plus-icon">
+                    <span class="material-symbols-outlined" id="plusIcon">add</span>
                 </button>
             </form>
         </div>
 
         <div class="navbar3">
             <div class="btn-settings">
-                <button type="" class="btn-settings">
-                    <span class="material-symbols-outlined rotate-center">settings</span>
+                <button type="button" class="btn-settings" onclick="toggleMenu()">
+                    <span class="material-symbols-outlined" id="settingsIcon">settings</span>
                 </button>
-                <a class="nav-link" href="{{ url_for('logout') }}"></a>
+                <div class="dropdown-menu" id="settingsMenu">
+                    <div class="dropdown-menu-btn">
+                        <a href="{{ url_for('logout') }}">Déconnexion</a>
+                    </div>
+                </div>
             </div>
         </div>
+        
 
     </nav>
     {% endif %}
 
+    <script>
+        function toggleMenu() {
+            var menu = document.getElementById("settingsMenu");
+            var icon = document.getElementById("settingsIcon");
+            menu.classList.toggle("active");
+            icon.classList.toggle("rotate-30");
+        }
+    
+        document.addEventListener("click", function(event) {
+            var settingsBtn = document.querySelector(".btn-settings");
+            var menu = document.getElementById("settingsMenu");
+            var icon = document.getElementById("settingsIcon");
+    
+            if (!settingsBtn.contains(event.target)) {
+                menu.classList.remove("active");
+                icon.classList.remove("rotate-30");
+            }
+        });
+    </script>
     
     <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
