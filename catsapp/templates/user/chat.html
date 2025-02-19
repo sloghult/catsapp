@@ -38,6 +38,33 @@
     {% endif %}
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
+            var sidebar = document.querySelector(".sidebar");
+            var chatContainer = document.querySelector(".chat-container");
+
+            toggleSidebarBtn.addEventListener("click", function() {
+                if (window.innerWidth <= 1050) {
+                    sidebar.classList.toggle("show");
+                    if (sidebar.classList.contains("show")) {
+                        chatContainer.style.display = "none";
+                    } else {
+                        chatContainer.style.display = "flex";
+                    }
+                } else {
+                    sidebar.classList.toggle("collapsed");
+                    chatContainer.classList.toggle("expanded");
+                }
+            });
+
+            window.addEventListener("resize", function() {
+                if (window.innerWidth > 1050) {
+                    sidebar.classList.remove("show");
+                    chatContainer.style.display = "flex";
+                }
+            });
+        });
+
         function toggleMenu() {
             var menu = document.getElementById("settingsMenu");
             var icon = document.getElementById("settingsIcon");
@@ -56,10 +83,6 @@
             }
         });
 
-        document.getElementById("toggleSidebarBtn").addEventListener("click", function() {
-            document.querySelector(".sidebar").classList.toggle("collapsed");
-            document.querySelector(".chat-container").classList.toggle("expanded");
-        });
     </script>
 
     <!-- Flash messages -->
@@ -85,7 +108,7 @@
                         <span class="material-symbols-outlined" id="plusIcon">add</span>
                     </button>
                 </form>
-            </div>
+            </div>            
             <div class="list-group">
                 {% for contact in contacts %}
                     <a href="{{ url_for('chat', contact_id=contact.id) }}" class="list-item {% if contact.id == current_contact.id %}active{% endif %}">

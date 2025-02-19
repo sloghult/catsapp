@@ -163,6 +163,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
+  position: relative;
 }
 
 .contact-header h4 {
@@ -261,7 +262,7 @@
   align-items: center;
   background-color: #202020;
   color: #fff;
-  padding: 15px;
+  padding: 15px 25px 15px 15px;
   border-radius: 20px;
   transition: background-color 0.3s, transform 0.3s;
   margin: 5px;
@@ -398,11 +399,10 @@
   font-size: 1.2rem;
 }
 
-
-@media (max-width: 1455px) {
+@media (max-width: 1560px) {
   .contact-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: start;
   }
 
   .contact-form {
@@ -411,3 +411,25 @@
       justify-content: start;
   }
 }
+
+@media (max-width: 1050px) {
+  .sidebar {
+    display: none; /* Masquer la barre latérale par défaut */
+    width: 0;
+  }
+
+  .sidebar.show {
+    display: block; /* Afficher la barre latérale lorsque la classe 'show' est ajoutée */
+    width: 100%;
+  }
+
+  .chat-container {
+    width: 100%; /* Étendre le conteneur de chat pour occuper tout l'espace */
+  }
+  .list-group {
+    padding-left: 35vh;
+    padding-right: 35vh;
+  }
+
+}
+
