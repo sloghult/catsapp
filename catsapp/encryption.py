@@ -1,35 +1,72 @@
 # CHIFFREMENT CESAR
 
 
-def encrypt_cesar(text, shift=3):
-    """Chiffre un texte en utilisant le chiffrement de César."""
-    encrypted = ""
-    for char in text:
-        if char.isalpha():
-            ascii_offset = ord('A') if char.isupper() else ord('a')
-            encrypted += chr((ord(char) - ascii_offset + shift) % 26 + ascii_offset)
-        else:
-            encrypted += char
-    return encrypted
+from base64 import b64encode, b64decode
+import random
+import string
 
-def decrypt_cesar(text, shift=3):
-    """Déchiffre un texte chiffré avec le chiffrement de César."""
-    return encrypt_cesar(text, -shift)  # Le déchiffrement est un chiffrement avec un décalage négatif
+
+def encrypt(text):
+    """
+    Chiffre un texte en utilisant une version améliorée du chiffrement de César avec une clé aléatoire.
+    Retourne un tuple (texte_chiffré, clé)
+    """
+    if not isinstance(text, str):
+        return "", "0"
+    
+    try:
+        # Générer une clé aléatoire entre 1 et 100
+        shift = random.randint(1, 100)
+        
+        # Convertir en bytes pour gérer tous les types de caractères
+        text_bytes = text.encode('utf-8')
+        encrypted_bytes = bytes([(b + shift) % 256 for b in text_bytes])
+        # Encoder en base64 pour assurer une représentation sûre
+        return b64encode(encrypted_bytes).decode('utf-8'), str(shift)
+    except Exception as e:
+        print(f"Erreur de chiffrement: {str(e)}")
+        return "", "0"
+
+def decrypt(text, shift):
+    """Déchiffre un texte chiffré avec une clé donnée."""
+    if not isinstance(text, str) or not isinstance(shift, (str, int)):
+        return ""
+    
+    try:
+        # Convertir shift en entier si c'est une chaîne
+        shift = int(shift)
+        # Décoder le base64 et déchiffrer
+        encrypted_bytes = b64decode(text.encode('utf-8'))
+        decrypted_bytes = bytes([(b - shift) % 256 for b in encrypted_bytes])
+        return decrypted_bytes.decode('utf-8')
+    except Exception as e:
+        print(f"Erreur de déchiffrement: {str(e)}")
+        return ""
 
 
 #CHIFFREMENT  VIGENERE
 '''
-def encrypt_vigenere(text, key="CATSAPP"):
+def generate_random_key():
+    """Génère une clé aléatoire de longueur entre 10 et 15 lettres."""
+    key_length = random.randint(10, 15)
+    return ''.join(random.choices(string.ascii_uppercase, k=key_length))
+
+def encrypt(text):
     """
-    Chiffre un texte en utilisant le chiffrement de Vigenère.
+    Chiffre un texte en utilisant le chiffrement de Vigenère avec une clé aléatoire.
     
     Args:
         text (str): Le texte à chiffrer
-        key (str): La clé de chiffrement (par défaut "CATSAPP")
     
     Returns:
-        str: Le texte chiffré
+        tuple: (texte_chiffré, clé)
     """
+    if not text:
+        return "", ""
+        
+    # Générer une clé aléatoire
+    key = generate_random_key()
+    
     encrypted = ""
     key = key.upper()
     key_length = len(key)
@@ -53,22 +90,24 @@ def encrypt_vigenere(text, key="CATSAPP"):
             
             encrypted += encrypted_char
         else:
-            # Conserve les caractères non-alphabétiques tels quels
             encrypted += char
             
-    return encrypted
+    return encrypted, key
 
-def decrypt_vigenere(text, key="CATSAPP"):
+def decrypt(text, key):
     """
     Déchiffre un texte chiffré avec le chiffrement de Vigenère.
     
     Args:
         text (str): Le texte à déchiffrer
-        key (str): La clé de chiffrement (par défaut "CATSAPP")
+        key (str): La clé de déchiffrement
     
     Returns:
         str: Le texte déchiffré
     """
+    if not text or not key:
+        return ""
+        
     decrypted = ""
     key = key.upper()
     key_length = len(key)
@@ -79,6 +118,7 @@ def decrypt_vigenere(text, key="CATSAPP"):
             # Détermine si le caractère est en majuscule ou minuscule
             is_upper = char.isupper()
             char_idx = ord(char.upper()) - ord('A')
+            
             # Utilise la clé de manière cyclique
             key_idx = key_as_int[i % key_length]
             
@@ -92,23 +132,7 @@ def decrypt_vigenere(text, key="CATSAPP"):
             
             decrypted += decrypted_char
         else:
-            # Conserve les caractères non-alphabétiques tels quels
             decrypted += char
             
     return decrypted
 '''
-
-from base64 import b64encode, b64decode
-
-def encrypt(text):
-    """Chiffre un texte en utilisant un encodage base64 simple."""
-    if not isinstance(text, str):
-        text = str(text)
-    return b64encode(text.encode('utf-8')).decode('utf-8')
-
-def decrypt(text):
-    """Déchiffre un texte encodé en base64."""
-    try:
-        return b64decode(text.encode('utf-8')).decode('utf-8')
-    except:
-        return text  # Retourne le texte original si le déchiffrement échoue

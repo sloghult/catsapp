@@ -225,7 +225,7 @@ def chat(contact_id=None):
         # Récupérer les derniers messages pour chaque contact
         for contact in contacts:
             cursor.execute("""
-                SELECT content 
+                SELECT content, cle 
                 FROM messages 
                 WHERE (sender_id = %s AND receiver_id = %s) 
                    OR (sender_id = %s AND receiver_id = %s) 
@@ -235,7 +235,7 @@ def chat(contact_id=None):
             last_message = cursor.fetchone()
             if last_message:
                 # Déchiffrer le dernier message pour l'aperçu
-                contact['last_message'] = decrypt(last_message['content'])
+                contact['last_message'] = decrypt(last_message['content'], last_message['cle'])
             else:
                 contact['last_message'] = None
 
@@ -255,7 +255,7 @@ def chat(contact_id=None):
             if current_contact:
                 # Récupérer les messages
                 cursor.execute("""
-                    SELECT sender_id, content, created_at 
+                    SELECT sender_id, content, cle, created_at 
                     FROM messages 
                     WHERE (sender_id = %s AND receiver_id = %s) 
                        OR (sender_id = %s AND receiver_id = %s) 
@@ -267,7 +267,7 @@ def chat(contact_id=None):
                 messages = []
                 for msg in encrypted_messages:
                     decrypted_msg = msg.copy()
-                    decrypted_msg['content'] = decrypt(msg['content'])
+                    decrypted_msg['content'] = decrypt(msg['content'], msg['cle'])
                     messages.append(decrypted_msg)
         
         # Récupérer l'utilisateur connecté
@@ -441,14 +441,14 @@ def send_message():
             logger.error(f"Contact non accepté: status={contact['status']}")
             return jsonify({'success': False, 'error': 'Contact non accepté'}), 403
 
-        # Chiffrer le message
-        encrypted_message = encrypt(message)
+        # Chiffrer le message avec une clé aléatoire
+        encrypted_message, key = encrypt(message)
         
         # Insérer le message
         cursor.execute('''
-            INSERT INTO messages (sender_id, receiver_id, content, created_at)
-            VALUES (%s, %s, %s, NOW())
-        ''', (session['user_id'], contact_id, encrypted_message))
+            INSERT INTO messages (sender_id, receiver_id, content, cle, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+        ''', (session['user_id'], contact_id, encrypted_message, key))
         
         # S'assurer qu'il n'y a pas de résultats non lus
         while cursor.nextset():
