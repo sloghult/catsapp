@@ -49,8 +49,10 @@
             <!-- Popup pour ajouter un contact -->
             <div id="addContactPopup" class="popup">
                 <div class="popup-content">
-                    <span class="material-symbols-outlined popup-close-btn" onclick="closePopup()">close</span>
-                    <h4>Ajouter un contact</h4>
+                    <div class="popup-close">
+                        <span class="material-symbols-outlined popup-close-btn" onclick="closePopup()">close</span>
+                    </div>
+                    <h3>Ajouter un contact</h3>
                     <form id="add-contact-form" class="contact-form">
                         <input type="text" id="contact-username" class="input-field" placeholder="pierre" required>
                         <button type="submit" class="btn-send">
@@ -65,7 +67,7 @@
             <div class="pending-contacts">
                 <div class="pending-contacts-card">
                     <h3>Demandes de contact</h3>
-                    <ul id="pending-contacts"></ul>
+                    <ul style="list-style-type: none;" id="pending-contacts"></ul>
                 </div>
             </div>
             
@@ -161,7 +163,7 @@
             });
     
             addContactBtn.addEventListener("click", function() {
-                addContactPopup.style.display = "block";
+                addContactPopup.style.display = "flex"; // Affiche la popup lorsque le bouton est cliqué
             });
         });
     
@@ -174,7 +176,7 @@
     
         function closePopup() {
             var addContactPopup = document.getElementById("addContactPopup");
-            addContactPopup.style.display = "none";
+            addContactPopup.style.display = "none"; // Masque la popup
         }
     
         document.addEventListener("click", function(event) {
@@ -188,6 +190,9 @@
             }
         });
     </script>
+    
+    
+    
     
 
 
@@ -219,14 +224,16 @@
             list.innerHTML = data.contacts.length === 0 ? "<p>Aucune demande en attente</p>" : "";
             data.contacts.forEach(contact => {
                 let li = document.createElement("li");
-                li.innerHTML = `${contact.username}
-                    <button onclick="acceptContact(${contact.id})">Accepter</button>
-                    <button onclick="blockContact(${contact.id})">Bloquer</button>`;
+                li.innerHTML = `<span class="contact-name">${contact.username}</span>
+                    <button class="action-btn accept-btn" onclick="acceptContact(${contact.id})">Accepter</button>
+                    <button class="action-btn block-btn" onclick="blockContact(${contact.id})">Bloquer</button>`;
                 list.appendChild(li);
             });
         })
         .catch(error => console.error("Erreur lors du chargement des demandes:", error));
     }
+
+
 
     function acceptContact(contactId) {
         fetch('/contacts/accept', {
