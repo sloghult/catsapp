@@ -498,18 +498,19 @@ body, html {
 
 @media (max-width: 1050px) {
   .sidebar {
-    display: none; /* Masquer la barre latérale par défaut */
+    display: none;
     width: 0;
   }
 
   .sidebar.show {
-    display: block; /* Afficher la barre latérale lorsque la classe 'show' est ajoutée */
+    display: block;
     width: 100%;
   }
 
-  .chat-container {
-    width: 100%; /* Étendre le conteneur de chat pour occuper tout l'espace */
+  .contact-header {
+    justify-content: center;
   }
+
   .contacts-list {
     padding-left: 15vh;
     padding-right: 15vh;
@@ -519,6 +520,11 @@ body, html {
     margin-left: 15vh;
     margin-right: 15vh;
   }
+
+  .chat-container {
+    width: 100%;
+  }
+
 }
 
 
