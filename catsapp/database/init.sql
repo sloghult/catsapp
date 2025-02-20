@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     user_id INT NOT NULL,
     contact_id INT NOT NULL,
     status ENUM('pending', 'accepted', 'blocked') DEFAULT 'pending',
+    contact_key VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (contact_id) REFERENCES users(id) ON DELETE CASCADE,

@@ -8,7 +8,7 @@ import json
 import threading
 from functools import wraps
 from datetime import datetime
-from encryption import encrypt, decrypt
+from encryption import encrypt, decrypt, encrypt_key, decrypt_key, generate_random_key
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG)
@@ -215,7 +215,7 @@ def chat(contact_id=None):
         
         # Récupère les contacts de l'utilisateur
         cursor.execute("""
-            SELECT users.id, users.username 
+            SELECT users.id, users.username, contacts.contact_key 
             FROM contacts
             JOIN users ON contacts.contact_id = users.id
             WHERE contacts.user_id = %s AND contacts.status = 'accepted'
@@ -234,8 +234,12 @@ def chat(contact_id=None):
             """, (session['user_id'], contact['id'], contact['id'], session['user_id']))
             last_message = cursor.fetchone()
             if last_message:
+                # Déchiffrer la clé du message
+                decrypted_key = decrypt_key(last_message['cle'], contact['contact_key'])
+                logger.debug(f"Clé déchiffrée: {decrypted_key} avec la contact_key: {contact['contact_key']}")
                 # Déchiffrer le dernier message pour l'aperçu
-                contact['last_message'] = decrypt(last_message['content'], last_message['cle'])
+                contact['last_message'] = decrypt(last_message['content'], decrypted_key)
+                logger.debug(f"Dernier message déchiffré: {contact['last_message']}")
             else:
                 contact['last_message'] = None
 
@@ -245,7 +249,8 @@ def chat(contact_id=None):
         if contact_id:
             # Vérifier que l'utilisateur sélectionné est bien un contact accepté
             cursor.execute("""
-                SELECT users.id, users.username FROM contacts
+                SELECT users.id, users.username, contacts.contact_key 
+                FROM contacts
                 JOIN users ON contacts.contact_id = users.id
                 WHERE contacts.user_id = %s AND contacts.contact_id = %s AND contacts.status = 'accepted'
             """, (session['user_id'], contact_id))
@@ -267,7 +272,12 @@ def chat(contact_id=None):
                 messages = []
                 for msg in encrypted_messages:
                     decrypted_msg = msg.copy()
-                    decrypted_msg['content'] = decrypt(msg['content'], msg['cle'])
+                    # Déchiffrer la clé du message
+                    decrypted_key = decrypt_key(msg['cle'], current_contact['contact_key'])
+                    logger.debug(f"Clé déchiffrée: {decrypted_key} avec la contact_key: {current_contact['contact_key']}")
+                    # Déchiffrer le message
+                    decrypted_msg['content'] = decrypt(msg['content'], decrypted_key)
+                    logger.debug(f"Message déchiffré: {decrypted_msg['content']}")
                     messages.append(decrypted_msg)
         
         # Récupérer l'utilisateur connecté
@@ -287,7 +297,6 @@ def chat(contact_id=None):
     finally:
         cursor.close()
         conn.close()
-
 
 @app.route('/contacts/add', methods=['POST'])
 @login_required
@@ -323,8 +332,12 @@ def add_contact():
     if cursor.fetchone():
         return jsonify({"success": False, "message": "Demande déjà envoyée ou contact existant"}), 400
 
-    # Insérer la demande de contact
-    cursor.execute("INSERT INTO contacts (user_id, contact_id, status) VALUES (%s, %s, 'pending')", (user_id, contact_id))
+    # Générer une clé de contact aléatoire
+    contact_key = generate_random_key()
+
+    # Insérer la demande de contact avec la clé de contact
+    cursor.execute("INSERT INTO contacts (user_id, contact_id, status, contact_key) VALUES (%s, %s, 'pending', %s)", 
+                   (user_id, contact_id, contact_key))
     conn.commit()
 
     cursor.close()
@@ -345,14 +358,16 @@ def accept_contact():
     user_id = session['user_id']
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     # Vérifier si une demande est en attente
     cursor.execute("""
         SELECT * FROM contacts WHERE user_id = %s AND contact_id = %s AND status = 'pending'
     """, (contact_id, user_id))
 
-    if not cursor.fetchone():
+    pending_contact = cursor.fetchone()
+
+    if not pending_contact:
         return jsonify({"success": False, "message": "Aucune demande en attente trouvée"}), 404
 
     # Accepter la demande (Mettre à jour l'entrée existante)
@@ -361,14 +376,14 @@ def accept_contact():
         WHERE user_id = %s AND contact_id = %s
     """, (contact_id, user_id))
 
-    # Ajouter une entrée réciproque si elle n'existe pas
+    # Ajouter une entrée réciproque avec la même clé de contact
     cursor.execute("""
-        INSERT INTO contacts (user_id, contact_id, status) 
-        SELECT %s, %s, 'accepted' FROM DUAL
+        INSERT INTO contacts (user_id, contact_id, status, contact_key) 
+        SELECT %s, %s, 'accepted', %s FROM DUAL
         WHERE NOT EXISTS (
             SELECT 1 FROM contacts WHERE user_id = %s AND contact_id = %s
         )
-    """, (user_id, contact_id, user_id, contact_id))
+    """, (user_id, contact_id, pending_contact['contact_key'], user_id, contact_id))
 
     conn.commit()
     cursor.close()
@@ -421,6 +436,8 @@ def send_message():
             logger.error("Contact ID ou message manquant")
             return jsonify({'success': False, 'error': 'Contact ID et message requis'}), 400
 
+        logger.info(f"Message écrit: {message}")
+
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True, buffered=True)  # Utiliser un curseur bufferisé
         
@@ -443,12 +460,24 @@ def send_message():
 
         # Chiffrer le message avec une clé aléatoire
         encrypted_message, key = encrypt(message)
+        logger.info(f"Clé de chiffrement non chiffrée: {key}")
+        logger.info(f"Message chiffré: {encrypted_message}")
         
-        # Insérer le message
+        # Récupérer la clé de contact
+        cursor.execute("SELECT contact_key FROM contacts WHERE (user_id = %s AND contact_id = %s) OR (user_id = %s AND contact_id = %s)", 
+                       (session['user_id'], contact_id, contact_id, session['user_id']))
+        contact = cursor.fetchone()
+        contact_key = contact['contact_key']
+        
+        # Chiffrer la clé avec la clé de contact
+        encrypted_key = encrypt_key(key, contact_key)
+        logger.info(f"Clé chiffrée: {encrypted_key} avec la contact_key: {contact_key}")
+        
+        # Insérer le message avec la clé chiffrée
         cursor.execute('''
             INSERT INTO messages (sender_id, receiver_id, content, cle, created_at)
             VALUES (%s, %s, %s, %s, NOW())
-        ''', (session['user_id'], contact_id, encrypted_message, key))
+        ''', (session['user_id'], contact_id, encrypted_message, encrypted_key))
         
         # S'assurer qu'il n'y a pas de résultats non lus
         while cursor.nextset():
