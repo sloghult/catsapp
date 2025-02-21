@@ -282,7 +282,7 @@ body, html {
   width: 70%;
   display: flex;
   flex-direction: column;
-  padding-top: 25px;
+  padding-top: 15px;
   padding-bottom: 20px;
   padding-left: 20px;
   padding-right: 20px;
@@ -296,7 +296,7 @@ body, html {
 .chat-header {
   display: flex;
   align-items: center;
-  padding-bottom: 20px;
+  padding-bottom: 10px;
 }
 
 .chat-user-card {

@@ -93,12 +93,6 @@
         <!-- Zone de chat -->
         <div class="chat-container">
             {% if current_contact %}
-                <div class="chat-header">
-                    <div class="chat-user-card">
-                        <img src="https://ui-avatars.com/api/?name={{ current_contact.username }}&background=random" class="contact-avatar" width="50" height="50">
-                        <h5>{{ current_contact.username }}</h5>
-                    </div>
-                </div>
                 <div class="chat-box" id="messageContainer">
                     {% for message in messages %}
                         {% if message.sender_id == session.user_id %}
