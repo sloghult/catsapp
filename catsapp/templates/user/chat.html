@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CatsApp - Chat</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
@@ -136,7 +137,9 @@
                 </form>
             {% else %}
                 <div class="no-contact-message">
-                    <p style="font-size: 1.3em;" class="text-muted">Ouvrez une conversation pour commencer à discuter !</p>
+                    <img style="width: 100px;" src="{{ url_for('static', filename='img/logo.png') }}">
+                    <h2 style="font-size: 55px; margin: 0; padding: 0;">CatsApp</h2>
+                    <p style="font-size: 1.3em; font-weight: bold; color: #999;" class="text-muted">Ouvrez une conversation pour commencer à discuter !</p>
                 </div>
             {% endif %}
         </div>
