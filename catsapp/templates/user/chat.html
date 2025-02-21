@@ -46,6 +46,11 @@
                 </button>
             </div>
 
+            <!-- Barre de recherche -->
+            <div class="search-bar">
+                <input type="text" id="searchInput" class="input-field" placeholder="Rechercher un contact...">
+            </div>
+
             <!-- Popup pour ajouter un contact -->
             <div id="addContactPopup" class="popup">
                 <div class="popup-content">
@@ -73,7 +78,7 @@
             
 
             <!-- Liste des contacts -->
-            <div class="contacts-list">
+            <div class="contacts-list" id="contactsList">
                 {% for contact in contacts %}
                     <a href="{{ url_for('chat', contact_id=contact.id) }}" class="list-item {% if contact.id == current_contact.id %}active{% endif %}">
                         <div class="contact-item">
@@ -182,6 +187,21 @@
             if (messageContainer) {
                 messageContainer.scrollTop = messageContainer.scrollHeight;
             }
+
+            // Filtrer les contacts
+            var searchInput = document.getElementById("searchInput");
+            searchInput.addEventListener("input", function() {
+                var filter = searchInput.value.toLowerCase();
+                var contacts = document.querySelectorAll(".contacts-list .list-item");
+                contacts.forEach(function(contact) {
+                    var username = contact.querySelector(".contact-info h6").textContent.toLowerCase();
+                    if (username.includes(filter)) {
+                        contact.style.display = "";
+                    } else {
+                        contact.style.display = "none";
+                    }
+                });
+            });
         });
     
         function toggleMenu() {
