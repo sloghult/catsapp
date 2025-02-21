@@ -105,12 +105,24 @@
                             <div class="message message-sent">
                                 <div class="message-content">
                                     <p>{{ message.content }}</p></div>
-                                <small class="message-time">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <small class="message-time">
+                                    {% if message.created_at.date() == current_time.date() %}
+                                        {{ message.created_at.strftime('%H:%M') }}
+                                    {% else %}
+                                        {{ message.created_at.strftime('%d/%m %H:%M') }}
+                                    {% endif %}
+                                </small>
                             </div>
                         {% else %}
                             <div class="message message-received">
                                 <div class="message-content">{{ message.content }}</div>
-                                <small class="message-time-received">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <small class="message-time-received">
+                                    {% if message.created_at.date() == current_time.date() %}
+                                        {{ message.created_at.strftime('%H:%M') }}
+                                    {% else %}
+                                        {{ message.created_at.strftime('%d/%m %H:%M') }}
+                                    {% endif %}
+                                </small>
                             </div>
                         {% endif %}
                     {% endfor %}

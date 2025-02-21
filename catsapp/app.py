@@ -288,11 +288,13 @@ def chat(contact_id=None):
         cursor.execute("SELECT id, username FROM users WHERE id = %s", (session['user_id'],))
         user = cursor.fetchone()
 
+        # Passer l'utilisateur connecté et l'heure actuelle au template
         return render_template('user/chat.html', 
-                             user=user,  # Passer l'utilisateur connecté au template
+                             user=user,  
                              contacts=contacts,
                              current_contact=current_contact,
-                             messages=messages)
+                             messages=messages,
+                             current_time=datetime.now())
                              
     except Exception as e:
         logger.error(f"Erreur lors du chargement du chat: {e}")
