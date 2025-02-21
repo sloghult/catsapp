@@ -69,7 +69,7 @@
             </div>
 
             <!-- Carte Demandes de contact -->
-            <div class="pending-contacts">
+            <div class="pending-contacts" id="pendingContactsSection" style="display: none;">
                 <div class="pending-contacts-card">
                     <h3>Demandes de contact</h3>
                     <ul style="list-style-type: none;" id="pending-contacts"></ul>
@@ -196,6 +196,9 @@
                     }
                 });
             });
+
+            // Charger les demandes de contact
+            loadPendingContacts();
         });
     
         function toggleMenu() {
@@ -220,6 +223,57 @@
                 icon.classList.remove("rotate-30");
             }
         });
+
+        function loadPendingContacts() {
+            fetch('/contacts/pending')
+            .then(response => response.json())
+            .then(data => {
+                let list = document.getElementById("pending-contacts");
+                let section = document.getElementById("pendingContactsSection");
+                if (data.contacts.length === 0) {
+                    section.style.display = "none";
+                } else {
+                    section.style.display = "block";
+                    list.innerHTML = "";
+                    data.contacts.forEach(contact => {
+                        let li = document.createElement("li");
+                        li.innerHTML = `<span class="contact-name">${contact.username}</span>
+                            <button class="action-btn accept-btn" onclick="acceptContact(${contact.id})">Accepter</button>
+                            <button class="action-btn block-btn" onclick="blockContact(${contact.id})">Bloquer</button>`;
+                        list.appendChild(li);
+                    });
+                }
+            })
+            .catch(error => console.error("Erreur lors du chargement des demandes:", error));
+        }
+
+        function acceptContact(contactId) {
+            fetch('/contacts/accept', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contact_id: contactId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                loadPendingContacts();
+            })
+            .catch(error => console.error("Erreur:", error));
+        }
+
+        function blockContact(contactId) {
+            fetch('/contacts/block', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contact_id: contactId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                loadPendingContacts();
+            })
+            .catch(error => console.error("Erreur:", error));
+        }
     </script>
     
     
@@ -246,55 +300,6 @@
         })
         .catch(error => console.error('Erreur:', error));
     });
-
-    function loadPendingContacts() {
-        fetch('/contacts/pending')
-        .then(response => response.json())
-        .then(data => {
-            let list = document.getElementById("pending-contacts");
-            list.innerHTML = data.contacts.length === 0 ? "<p>Aucune demande en attente</p>" : "";
-            data.contacts.forEach(contact => {
-                let li = document.createElement("li");
-                li.innerHTML = `<span class="contact-name">${contact.username}</span>
-                    <button class="action-btn accept-btn" onclick="acceptContact(${contact.id})">Accepter</button>
-                    <button class="action-btn block-btn" onclick="blockContact(${contact.id})">Bloquer</button>`;
-                list.appendChild(li);
-            });
-        })
-        .catch(error => console.error("Erreur lors du chargement des demandes:", error));
-    }
-
-
-
-    function acceptContact(contactId) {
-        fetch('/contacts/accept', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contact_id: contactId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            loadPendingContacts();
-        })
-        .catch(error => console.error("Erreur:", error));
-    }
-
-    function blockContact(contactId) {
-        fetch('/contacts/block', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contact_id: contactId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            loadPendingContacts();
-        })
-        .catch(error => console.error("Erreur:", error));
-    }
-
-    document.addEventListener("DOMContentLoaded", loadPendingContacts);
 
     {% if current_contact %}
     const messageForm = document.getElementById("messageForm");
