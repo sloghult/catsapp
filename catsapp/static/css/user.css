@@ -138,6 +138,35 @@ body, html {
   outline: none;
 }
 
+.search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  padding: 0px 5px 5px 5px;
+
+}
+
+.input-field-search-bar {
+  width: 60%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 25px;
+  background-color: #202020;
+  color: #fff;
+  border: none;
+  transition: all 0.4s ease;
+  
+}
+
+.input-field-search-bar::placeholder {
+  color: #ffffff;
+
+}
+
+.input-field-search-bar:focus {
+  outline: none;
+}
+
 .input-field-chat {
   width: 300px;
   padding: 12px;
@@ -179,7 +208,7 @@ body, html {
 .contact-header {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px 20px 5px 10px;
   position: relative;
 }
 
@@ -252,7 +281,7 @@ body, html {
   color: #fff;
   border-radius: 20px;
   padding: 15px;
-  margin: 0px 5px 10px 5px
+  margin: 0px 5px 0 5px
 }
 
 .pending-contacts-card h3 {
