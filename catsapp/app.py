@@ -213,13 +213,17 @@ def chat(contact_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Récupère les contacts de l'utilisateur
+        # Récupère les contacts de l'utilisateur et trie par date du dernier message
         cursor.execute("""
-            SELECT users.id, users.username, contacts.contact_key 
+            SELECT users.id, users.username, contacts.contact_key, 
+                   (SELECT MAX(created_at) FROM messages 
+                    WHERE (sender_id = users.id AND receiver_id = %s) 
+                       OR (sender_id = %s AND receiver_id = users.id)) AS last_message_date
             FROM contacts
             JOIN users ON contacts.contact_id = users.id
             WHERE contacts.user_id = %s AND contacts.status = 'accepted'
-        """, (session['user_id'],))
+            ORDER BY last_message_date IS NULL DESC, last_message_date DESC
+        """, (session['user_id'], session['user_id'], session['user_id']))
         contacts = cursor.fetchall()
         
         # Récupérer les derniers messages pour chaque contact
