@@ -176,6 +176,12 @@
             addContactBtn.addEventListener("click", function() {
                 addContactPopup.style.display = "flex"; // Affiche la popup lorsque le bouton est cliqué
             });
+
+            // Faire défiler la zone de messages vers le bas
+            var messageContainer = document.getElementById("messageContainer");
+            if (messageContainer) {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
         });
     
         function toggleMenu() {
