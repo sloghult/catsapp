@@ -58,7 +58,7 @@ body, html {
 }
 
 .material-symbols-outlined {
-  font-size: 24px;
+
   transition: transform 0.4s;
 }
 
@@ -167,22 +167,54 @@ body, html {
 }
 
 .input-field-chat {
-  width: 300px;
-  padding: 12px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px;
   font-size: 16px;
-  border-radius: 25px;
-  border: 2.5px solid rgb(48, 48, 48);
-  margin-right: 10px;
+  border-radius: 15px;
+  border: none;
   transition: all 0.4s ease;
-  border-color: rgb(48, 48, 48);
+  background-color: #f1f1f1;
+  color: #b4b4b4;
   outline: none;
   font-weight: bold;
 }
 
 .input-field-chat::placeholder {
-  color: #202020;
+  color: #b4b4b4;
   font-weight: bold;
 }
+
+.btn-attachment {
+  height: 42px;
+  width: 20%;
+  border: none;
+  border-radius: 50px;
+  background-color: #f1f1f1;
+  color: #b4b4b4;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+
+.btn-attachment:hover {
+  background-color: #e4e4e4;
+}
+
+.btn-attachment .material-symbols-outlined {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-60deg);
+  font-size: 30px;
+  transition: all 0.4s;
+}
+
+.btn-attachment .material-symbols-outlined:hover {
+  color: #b4b4b4;
+}
+
+
 
 .main-container {
   height: 100vh; /* Utilisez 100vh pour occuper toute la hauteur de la fenêtre */
@@ -371,6 +403,20 @@ body, html {
   justify-content: center;
 }
 
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  height: 55px;
+  width: 350px;
+  padding: 5px;
+  border-radius: 50px;
+  border: 2px solid #dddddd;
+  background-color: #f1f1f1;
+  transition: all 0.4s;
+}
+
 .btn-send {
   display: flex;
   justify-content: center;
@@ -389,16 +435,21 @@ body, html {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 50px;
-  height: 50px;
+  margin-left: 10px;
+  width: 55px;
+  height: 55px;
   border: none;
   border-radius: 50%;
-  background-color: #202020;
+  border: 2px solid #ddd;
+  background-color: #f1f1f1;
   color: #fff;
   cursor: pointer;
   transition: all 0.4s;
 }
 
+.btn-send-chat:hover {
+  background-color: #ddd;
+}
 
 
 .btn-send:hover {
@@ -520,8 +571,8 @@ body, html {
   .contact-form {
       margin-top: 10px;
       width: 100%;
-      
   }
+
 }
 
 @media (max-width: 1050px) {
@@ -547,6 +598,12 @@ body, html {
   .pending-contacts {
     margin-left: 15vh;
     margin-right: 15vh;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .chat-container {
@@ -580,9 +637,6 @@ body, html {
     margin-right: 0;
   }
 
-  .input-field-chat {
-    width: 220px;
-  }
 }
 
 .sidebar .contacts-list,

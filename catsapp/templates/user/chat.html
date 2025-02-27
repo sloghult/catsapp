@@ -129,12 +129,18 @@
                 </div>
 
                 <!-- Zone de saisie -->
-                <form id="messageForm" class="input-container">
-                    <input type="text" id="messageContent" class="input-field-chat" placeholder="Entrer un message..">
-                    <button type="submit" class="btn-send-chat">
-                        <span style="font-size: 30px; margin-left: 3px;" class="material-symbols-outlined">send</span>
+                <div class="input-container">
+                    <form id="messageForm" class="chat-input">
+                        <input type="text" id="messageContent" class="input-field-chat" placeholder="Entrer un message..">
+                        <button type="button" class="btn-attachment">
+                            <span class="material-symbols-outlined">attachment</span>
+                        </button>
+                    </form>
+                    <button type="submit" form="messageForm" class="btn-send-chat">
+                        <span style="font-size: 30px; color: #b4b4b4;" class="material-symbols-outlined">send</span>
                     </button>
-                </form>
+                </div>
+
             {% else %}
                 <div class="no-contact-message">
                     <img style="width: 100px;" src="{{ url_for('static', filename='img/logo.png') }}">
