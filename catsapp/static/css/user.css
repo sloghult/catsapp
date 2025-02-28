@@ -93,7 +93,8 @@ body, html {
 }
 
 .dropdown-menu-btn {
-  margin-top: 15px;
+  padding-top: 15px;
+  padding-bottom: 15px;
   display: block;
 }
 
@@ -292,13 +293,14 @@ body, html {
   left: 34px;
   width: 15px;
   height: 15px;
-  background-color: #1bd14f;
+  background-color: #202020;
   border-radius: 50%;
   border: 1.5px solid #fff;
 }
 
 .active-indicator.active-border {
   border: 1.5px solid #202020;
+  background-color: #fff;
 }
 
 .contact-avatar {
@@ -663,13 +665,14 @@ body, html {
   width: auto;
 }
 
+.sidebar .search-bar,
 .sidebar .contact-header {
   opacity: 1;
   visibility: visible;
   width: auto;
 }
 
-
+.sidebar.collapsed .search-bar,
 .sidebar.collapsed .contact-header,
 .sidebar.collapsed .contacts-list,
 .sidebar.collapsed .pending-contacts {
