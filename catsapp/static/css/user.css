@@ -139,30 +139,28 @@ body, html {
   border-radius: 15px;
   border: none;
   transition: all 0.4s ease;
-  background-color: #f1f1f1;
-  color: #b4b4b4;
+  background-color: #202020;
+  color: #fff;
   outline: none;
   font-weight: bold;
 }
 
 .input-field-chat::placeholder {
-  color: #b4b4b4;
+  color: #fff;
   font-weight: bold;
 }
 
 .btn-attachment {
-  height: 42px;
-  width: 20%;
   border: none;
-  border-radius: 50px;
-  background-color: #f1f1f1;
-  color: #b4b4b4;
+  color: #fff;
   cursor: pointer;
+  background-color: #202020;
+  margin-right: 8px;
   transition: all 0.4s;
 }
 
 .btn-attachment:hover {
-  background-color: #e4e4e4;
+  background-color: #202020;
 }
 
 .btn-attachment .material-symbols-outlined {
@@ -175,7 +173,7 @@ body, html {
 }
 
 .btn-attachment .material-symbols-outlined:hover {
-  color: #b4b4b4;
+  color: #fff;
 }
 
 
@@ -254,15 +252,15 @@ body, html {
   position: absolute;
   top: 34px;
   left: 34px;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   background-color: #202020;
   border-radius: 50%;
-  border: 1.5px solid #fff;
+  border: 2px solid #fff;
 }
 
 .active-indicator.active-border {
-  border: 1.5px solid #202020;
+  border: 2px solid #202020;
   background-color: #fff;
 }
 
@@ -393,8 +391,7 @@ body, html {
   width: 350px;
   padding: 5px;
   border-radius: 50px;
-  border: 2px solid #dddddd;
-  background-color: #f1f1f1;
+  background-color: #202020;
   transition: all 0.4s;
 }
 
@@ -421,15 +418,14 @@ body, html {
   height: 55px;
   border: none;
   border-radius: 50%;
-  border: 2px solid #ddd;
-  background-color: #f1f1f1;
+  background-color: #202020;
   color: #fff;
   cursor: pointer;
   transition: all 0.4s;
 }
 
 .btn-send-chat:hover {
-  background-color: #ddd;
+  background-color: rgb(45, 45, 45);
 }
 
 
