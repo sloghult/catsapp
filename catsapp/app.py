@@ -212,28 +212,29 @@ def chat(contact_id=None):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
+
         # Récupère les contacts de l'utilisateur et trie par date du dernier message
         cursor.execute("""
-            SELECT users.id, users.username, contacts.contact_key, 
-                   (SELECT MAX(created_at) FROM messages 
-                    WHERE (sender_id = users.id AND receiver_id = %s) 
-                       OR (sender_id = %s AND receiver_id = users.id)) AS last_message_date
+            SELECT users.id, users.username, contacts.contact_key,
+                   (SELECT MAX(created_at) FROM messages
+                    WHERE (sender_id = users.id AND receiver_id = %s)
+                       OR (sender_id = %s AND receiver_id = users.id)) AS last_message_date,
+                   (SELECT 1 FROM sessions WHERE user_id = users.id LIMIT 1) AS is_active
             FROM contacts
             JOIN users ON contacts.contact_id = users.id
             WHERE contacts.user_id = %s AND contacts.status = 'accepted'
             ORDER BY last_message_date IS NULL DESC, last_message_date DESC
         """, (session['user_id'], session['user_id'], session['user_id']))
         contacts = cursor.fetchall()
-        
+
         # Récupérer les derniers messages pour chaque contact
         for contact in contacts:
             cursor.execute("""
-                SELECT content, cle 
-                FROM messages 
-                WHERE (sender_id = %s AND receiver_id = %s) 
-                   OR (sender_id = %s AND receiver_id = %s) 
-                ORDER BY created_at DESC 
+                SELECT content, cle
+                FROM messages
+                WHERE (sender_id = %s AND receiver_id = %s)
+                   OR (sender_id = %s AND receiver_id = %s)
+                ORDER BY created_at DESC
                 LIMIT 1
             """, (session['user_id'], contact['id'], contact['id'], session['user_id']))
             last_message = cursor.fetchone()
@@ -253,25 +254,25 @@ def chat(contact_id=None):
         if contact_id:
             # Vérifier que l'utilisateur sélectionné est bien un contact accepté
             cursor.execute("""
-                SELECT users.id, users.username, contacts.contact_key 
+                SELECT users.id, users.username, contacts.contact_key
                 FROM contacts
                 JOIN users ON contacts.contact_id = users.id
                 WHERE contacts.user_id = %s AND contacts.contact_id = %s AND contacts.status = 'accepted'
             """, (session['user_id'], contact_id))
-    
+
             current_contact = cursor.fetchone()
-            
+
             if current_contact:
                 # Récupérer les messages
                 cursor.execute("""
-                    SELECT sender_id, content, cle, created_at 
-                    FROM messages 
-                    WHERE (sender_id = %s AND receiver_id = %s) 
-                       OR (sender_id = %s AND receiver_id = %s) 
+                    SELECT sender_id, content, cle, created_at
+                    FROM messages
+                    WHERE (sender_id = %s AND receiver_id = %s)
+                       OR (sender_id = %s AND receiver_id = %s)
                     ORDER BY created_at
                 """, (session['user_id'], contact_id, contact_id, session['user_id']))
                 encrypted_messages = cursor.fetchall()
-                
+
                 # Déchiffrer les messages
                 messages = []
                 for msg in encrypted_messages:
@@ -283,19 +284,19 @@ def chat(contact_id=None):
                     decrypted_msg['content'] = decrypt(msg['content'], decrypted_key)
                     logger.debug(f"Message déchiffré: {decrypted_msg['content']}")
                     messages.append(decrypted_msg)
-        
+
         # Récupérer l'utilisateur connecté
         cursor.execute("SELECT id, username FROM users WHERE id = %s", (session['user_id'],))
         user = cursor.fetchone()
 
         # Passer l'utilisateur connecté et l'heure actuelle au template
-        return render_template('user/chat.html', 
-                             user=user,  
+        return render_template('user/chat.html',
+                             user=user,
                              contacts=contacts,
                              current_contact=current_contact,
                              messages=messages,
                              current_time=datetime.now())
-                             
+
     except Exception as e:
         logger.error(f"Erreur lors du chargement du chat: {e}")
         flash('Une erreur est survenue')
@@ -303,6 +304,8 @@ def chat(contact_id=None):
     finally:
         cursor.close()
         conn.close()
+
+
 
 @app.route('/contacts/add', methods=['POST'])
 @login_required
@@ -418,6 +421,34 @@ def list_contacts():
     conn.close()
 
     return jsonify({"success": True, "contacts": contacts})
+
+
+@app.route('/set_active_status', methods=['POST'])
+@login_required
+def set_active_status():
+    data = request.get_json()
+    status = data.get('status')
+    user_id = session.get('user_id')
+
+    if user_id and status:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if status == 'active':
+            # Mettre à jour l'entrée dans la table sessions
+            cursor.execute("INSERT INTO sessions (user_id, last_active) VALUES (%s, NOW()) ON DUPLICATE KEY UPDATE last_active = NOW()", (user_id,))
+        elif status == 'inactive':
+            # Supprimer l'entrée de la table sessions
+            cursor.execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    return jsonify({'success': True})
+
+
+
 
 @app.route('/send_message', methods=['POST'])
 @login_required

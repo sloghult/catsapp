@@ -83,6 +83,9 @@
                 {% for contact in contacts %}
                     <a href="{{ url_for('chat', contact_id=contact.id) }}" class="list-item {% if contact.id == current_contact.id %}active{% endif %}">
                         <div class="contact-item">
+                            {% if contact.is_active %}
+                                <span class="active-indicator {% if contact.id == current_contact.id %}active-border{% endif %}"></span>
+                            {% endif %}
                             <img src="https://ui-avatars.com/api/?name={{ contact.username }}&background=random" class="contact-avatar" width="50" height="50">
                             <div class="contact-info">
                                 <h6>{{ contact.username }}</h6>
@@ -95,6 +98,48 @@
                 {% endfor %}
             </div>
         </div>
+
+
+        <script>
+            let activityTimer;
+            let isActive = true;
+        
+            function sendActivityStatus(status) {
+                fetch('/set_active_status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: status })
+                });
+            }
+        
+            function resetActivityTimer() {
+                clearTimeout(activityTimer);
+                activityTimer = setTimeout(() => {
+                    isActive = false;
+                    sendActivityStatus('inactive');
+                }, 120000); // 2 minutes
+            }
+        
+            window.onload = function() {
+                sendActivityStatus('active');
+                resetActivityTimer();
+        
+                // Réinitialiser le timer à chaque activité
+                document.addEventListener('keypress', resetActivityTimer);
+                document.addEventListener('click', resetActivityTimer);
+                document.addEventListener('mousemove', resetActivityTimer);
+            };
+        
+            window.onbeforeunload = function() {
+                sendActivityStatus('inactive');
+            };
+        </script>
+        
+        
+        
+        
 
         <!-- Zone de chat -->
         <div class="chat-container">

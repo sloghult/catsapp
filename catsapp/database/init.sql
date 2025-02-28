@@ -36,3 +36,13 @@ CREATE TABLE IF NOT EXISTS contacts (
     FOREIGN KEY (contact_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE (user_id, contact_id)
 );
+
+-- Table des sessions
+CREATE TABLE IF NOT EXISTS sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    session_data TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
