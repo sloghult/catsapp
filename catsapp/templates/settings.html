@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatsApp - Paramètres</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar1"></div>
+        <div class="navbar2">
+            <a style="text-decoration: none; color: inherit;" href="/chat"><h2 style="font-size: 3em; cursor: pointer;">CatsApp</h2></a>
+        </div>
+        <div class="navbar3">
+            <div class="btn-logout">
+                <a href="{{ url_for('logout') }}" class="btn-logout">
+                    <span class="material-symbols-outlined" id="settingsIcon">logout</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    <div class="main-container">
+        <div class="settings-container">
+            <form id="settingsForm" enctype="multipart/form-data">
+                <div class="form-group profile-picture-group">
+                    <label for="profilePicture">
+                        <div class="profile-picture-container">
+                            <img src="{{ user.profile_picture_url if user.profile_picture_url else 'https://ui-avatars.com/api/?name=' + user.username + '&background=random' }}" alt="Photo de profil" class="profile-picture">
+                            <label for="profilePicture" class="edit-icon-label">
+                                <span class="material-symbols-outlined edit">edit</span>
+                            </label>
+                            <input type="file" id="profilePicture" name="profilePicture" accept="image/*" class="profile-picture-input">
+                        </div>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="nom">Nom :</label>
+                    <input type="text" id="nom" name="nom" value="{{ user.nom }}">
+                </div>
+                <div class="form-group">
+                    <label for="prenom">Prénom :</label>
+                    <input type="text" id="prenom" name="prenom" value="{{ user.prenom }}">
+                </div>
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur :</label>
+                    <input type="text" id="username" name="username" value="{{ user.username }}">
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe :</label>
+                    <input type="password" id="password" name="password" placeholder="Nouveau mot de passe">
+                </div>
+                <button type="submit" class="btn-save">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.getElementById('settingsForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            fetch('/update_settings', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Paramètres mis à jour avec succès !');
+                } else {
+                    alert('Erreur lors de la mise à jour des paramètres.');
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        });
+    </script>
+</body>
+</html>

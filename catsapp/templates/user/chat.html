@@ -25,19 +25,11 @@
 
         <div class="navbar3">
             <div class="btn-settings">
-                <button type="button" class="btn-settings" onclick="toggleMenu()">
+                <a href="{{ url_for('settings') }}" class="btn-settings">
                     <span class="material-symbols-outlined" id="settingsIcon">settings</span>
-                </button>
-                <div class="dropdown-menu" id="settingsMenu">
-                    <div class="dropdown-menu-btn">
-                        <a href="">Paramètres</a>
-                    </div>
-                    <div class="dropdown-menu-btn">
-                        <a href="{{ url_for('logout') }}">Déconnexion</a>
-                    </div>
-                </div>
+                </a>
             </div>
-        </div>
+        </div>        
     </nav>
     {% endif %}
 
@@ -191,7 +183,7 @@
 
             {% else %}
                 <div class="no-contact-message">
-                    <img style="width: 100px;" src="{{ url_for('static', filename='img/logo.png') }}">
+                    <!-- <img style="width: 100px;" src="{{ url_for('static', filename='img/logo.png') }}"> -->
                     <h2 style="font-size: 55px; margin: 0; padding: 0;">CatsApp</h2>
                     <p style="font-size: 1.3em; font-weight: bold; color: #999;" class="text-muted">Ouvrez une conversation pour commencer à discuter !</p>
                 </div>

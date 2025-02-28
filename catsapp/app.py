@@ -631,6 +631,54 @@ def typing():
         logger.error(f"Erreur lors de l'envoi de l'événement de frappe: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
+
+@app.route('/settings', methods=['GET'])
+@login_required
+def settings():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id, username, nom, prenom FROM users WHERE id = %s", (session['user_id'],))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return render_template('settings.html', user=user)
+
+
+
+@app.route('/update_settings', methods=['POST'])
+@login_required
+def update_settings():
+    try:
+        nom = request.form.get('nom')
+        prenom = request.form.get('prenom')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        profile_picture = request.files.get('profilePicture')
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if profile_picture:
+            # Enregistrer la photo de profil (vous pouvez ajouter le code pour enregistrer l'image ici)
+            pass
+
+        if password:
+            hashed_password = generate_password_hash(password)
+            cursor.execute('UPDATE users SET password = %s WHERE id = %s', (hashed_password, session['user_id']))
+
+        cursor.execute('UPDATE users SET nom = %s, prenom = %s, username = %s WHERE id = %s',
+                       (nom, prenom, username, session['user_id']))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erreur lors de la mise à jour des paramètres: {e}")
+        return jsonify({'success': False})
+
+
+
 @app.route('/admin')
 @login_required
 @admin_required
