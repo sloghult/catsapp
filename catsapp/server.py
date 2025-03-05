@@ -6,7 +6,7 @@ from database.db import DB_CONFIG
 import logging
 from datetime import datetime
 import queue
-from encryption import encrypt, decrypt
+from encryption import encrypt_message , decrypt_message
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG)
