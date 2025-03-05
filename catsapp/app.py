@@ -8,7 +8,7 @@ import json
 import threading
 from functools import wraps
 from datetime import datetime
-from encryption import encrypt, decrypt, encrypt_key, decrypt_key, generate_random_key
+from encryption import encrypt_message, decrypt_message, generate_rsa_keys
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG)
@@ -27,13 +27,13 @@ def get_socket_client(user_id):
             try:
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 client.connect(('127.0.0.1', 5001))  # Mise à jour du port à 5001
-                
+
                 # Authentification
                 auth_data = {
                     'user_id': user_id
                 }
                 client.send(json.dumps(auth_data).encode('utf-8'))
-                
+
                 # Démarrer un thread pour écouter les messages
                 def listen_for_messages(sock, uid):
                     while True:
@@ -41,19 +41,19 @@ def get_socket_client(user_id):
                             data = sock.recv(4096).decode('utf-8')
                             if not data:
                                 break
-                            
+
                             message = json.loads(data)
                             logger.debug(f"Message reçu pour l'utilisateur {uid}: {message}")
-                            
+
                             # Traiter le message selon son type
                             if message['type'] == 'new_message':
                                 # Stocker le message dans la base de données si nécessaire
                                 pass
-                            
+
                         except Exception as e:
                             logger.error(f"Erreur lors de la réception du message: {e}")
                             break
-                    
+
                     # Si on sort de la boucle, fermer la connexion
                     with socket_lock:
                         if uid in socket_clients:
@@ -62,19 +62,19 @@ def get_socket_client(user_id):
                                 sock.close()
                             except:
                                 pass
-                
+
                 # Démarrer le thread d'écoute
                 listener_thread = threading.Thread(target=listen_for_messages, args=(client, user_id))
                 listener_thread.daemon = True
                 listener_thread.start()
-                
+
                 socket_clients[user_id] = client
                 logger.debug(f"Nouvelle connexion socket créée pour l'utilisateur {user_id}")
-            
+
             except Exception as e:
                 logger.error(f"Erreur lors de la création du socket: {e}")
                 return None
-        
+
         return socket_clients.get(user_id)
 
 def get_db_connection():
@@ -108,7 +108,7 @@ def admin_required(f):
             logger.debug(f"Pas d'user_id dans la session: {session}")
             flash('Veuillez vous connecter d\'abord.', 'error')
             return redirect(url_for('login'))
-        
+
         # Vérifier si l'utilisateur est admin
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -116,10 +116,10 @@ def admin_required(f):
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-        
+
         logger.debug(f"User trouvé dans la DB: {user}")
         logger.debug(f"Session actuelle: {session}")
-        
+
         if not user or user['username'].lower() != 'admin':
             logger.debug(f"Utilisateur non admin: username={user['username'] if user else 'None'}")
             flash('Accès non autorisé.', 'error')
@@ -138,27 +138,27 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         try:
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            
+
             cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
             user = cursor.fetchone()
-            
+
             if user and check_password_hash(user['password'], password):
                 session['user_id'] = user['id']
                 session['username'] = user['username']
                 session['nom'] = user['nom']
                 session['prenom'] = user['prenom']
-                
+
                 # Si c'est l'admin, rediriger vers le dashboard admin
                 if user['username'] == 'admin':
                     return redirect(url_for('admin_dashboard'))
-                    
+
                 # Créer une connexion socket pour l'utilisateur
                 get_socket_client(user['id'])
-                
+
                 return redirect(url_for('chat'))
             else:
                 flash('Nom d\'utilisateur ou mot de passe incorrect.', 'error')
@@ -168,7 +168,7 @@ def login():
         finally:
             cursor.close()
             conn.close()
-    
+
     return render_template('/index.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -178,16 +178,19 @@ def register():
         password = request.form.get('password')
         nom = request.form.get('nom')
         prenom = request.form.get('prenom')
-        
+
         try:
             hashed_password = generate_password_hash(password)
-            
+            private_key_pem, public_key_pem = generate_rsa_keys()
+            logger.debug(f"Clé publique: {public_key_pem.decode('utf-8')}")
+            logger.debug(f"Clé privée: {private_key_pem.decode('utf-8')}")
+
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute(
-                'INSERT INTO users (username, password, nom, prenom) VALUES (%s, %s, %s, %s)',
-                (username, hashed_password, nom, prenom)
+                'INSERT INTO users (username, password, nom, prenom, public_key, private_key) VALUES (%s, %s, %s, %s, %s, %s)',
+                (username, hashed_password, nom, prenom, public_key_pem.decode('utf-8'), private_key_pem.decode('utf-8'))
             )
             conn.commit()
             flash('Inscription réussie ! Vous pouvez maintenant vous connecter.')
@@ -202,7 +205,7 @@ def register():
         finally:
             cursor.close()
             conn.close()
-    
+
     return render_template('register.html')
 
 @app.route('/chat')
@@ -230,7 +233,7 @@ def chat(contact_id=None):
         # Récupérer les derniers messages pour chaque contact
         for contact in contacts:
             cursor.execute("""
-                SELECT content, cle
+                SELECT content
                 FROM messages
                 WHERE (sender_id = %s AND receiver_id = %s)
                    OR (sender_id = %s AND receiver_id = %s)
@@ -239,12 +242,13 @@ def chat(contact_id=None):
             """, (session['user_id'], contact['id'], contact['id'], session['user_id']))
             last_message = cursor.fetchone()
             if last_message:
-                # Déchiffrer la clé du message
-                decrypted_key = decrypt_key(last_message['cle'], contact['contact_key'])
-                logger.debug(f"Clé déchiffrée: {decrypted_key} avec la contact_key: {contact['contact_key']}")
                 # Déchiffrer le dernier message pour l'aperçu
-                contact['last_message'] = decrypt(last_message['content'], decrypted_key)
-                logger.debug(f"Dernier message déchiffré: {contact['last_message']}")
+                try:
+                    contact['last_message'] = decrypt_message(last_message['content'], session['private_key'].encode('utf-8'))
+                    logger.debug(f"Dernier message déchiffré: {contact['last_message']}")
+                except Exception as e:
+                    logger.error(f"Erreur lors du déchiffrement du dernier message: {e}")
+                    contact['last_message'] = "Erreur de déchiffrement"
             else:
                 contact['last_message'] = None
 
@@ -265,7 +269,7 @@ def chat(contact_id=None):
             if current_contact:
                 # Récupérer les messages
                 cursor.execute("""
-                    SELECT sender_id, content, cle, created_at
+                    SELECT sender_id, content, created_at
                     FROM messages
                     WHERE (sender_id = %s AND receiver_id = %s)
                        OR (sender_id = %s AND receiver_id = %s)
@@ -277,17 +281,19 @@ def chat(contact_id=None):
                 messages = []
                 for msg in encrypted_messages:
                     decrypted_msg = msg.copy()
-                    # Déchiffrer la clé du message
-                    decrypted_key = decrypt_key(msg['cle'], current_contact['contact_key'])
-                    logger.debug(f"Clé déchiffrée: {decrypted_key} avec la contact_key: {current_contact['contact_key']}")
                     # Déchiffrer le message
-                    decrypted_msg['content'] = decrypt(msg['content'], decrypted_key)
-                    logger.debug(f"Message déchiffré: {decrypted_msg['content']}")
+                    try:
+                        decrypted_msg['content'] = decrypt_message(msg['content'], session['private_key'].encode('utf-8'))
+                        logger.debug(f"Message déchiffré: {decrypted_msg['content']}")
+                    except Exception as e:
+                        logger.error(f"Erreur lors du déchiffrement du message: {e}")
+                        decrypted_msg['content'] = "Erreur de déchiffrement"
                     messages.append(decrypted_msg)
 
         # Récupérer l'utilisateur connecté
-        cursor.execute("SELECT id, username FROM users WHERE id = %s", (session['user_id'],))
+        cursor.execute("SELECT id, username, private_key FROM users WHERE id = %s", (session['user_id'],))
         user = cursor.fetchone()
+        session['private_key'] = user['private_key']
 
         # Passer l'utilisateur connecté et l'heure actuelle au template
         return render_template('user/chat.html',
@@ -304,8 +310,6 @@ def chat(contact_id=None):
     finally:
         cursor.close()
         conn.close()
-
-
 
 @app.route('/contacts/add', methods=['POST'])
 @login_required
@@ -334,26 +338,25 @@ def add_contact():
 
     # Vérifier si une relation existe déjà
     cursor.execute("""
-        SELECT * FROM contacts 
+        SELECT * FROM contacts
         WHERE (user_id = %s AND contact_id = %s) OR (user_id = %s AND contact_id = %s)
     """, (user_id, contact_id, contact_id, user_id))
-    
+
     if cursor.fetchone():
         return jsonify({"success": False, "message": "Demande déjà envoyée ou contact existant"}), 400
 
-    # Générer une clé de contact aléatoire
-    contact_key = generate_random_key()
+    # Générer une paire de clés RSA
+    private_key_pem, public_key_pem = generate_rsa_keys()
 
-    # Insérer la demande de contact avec la clé de contact
-    cursor.execute("INSERT INTO contacts (user_id, contact_id, status, contact_key) VALUES (%s, %s, 'pending', %s)", 
-                   (user_id, contact_id, contact_key))
+    # Insérer la demande de contact avec la clé publique comme contact_key
+    cursor.execute("INSERT INTO contacts (user_id, contact_id, status, contact_key) VALUES (%s, %s, 'pending', %s)",
+                   (user_id, contact_id, public_key_pem.decode('utf-8')))
     conn.commit()
 
     cursor.close()
     conn.close()
-    
-    return jsonify({"success": True, "message": "Demande de contact envoyée"}), 201
 
+    return jsonify({"success": True, "message": "Demande de contact envoyée"}), 201
 
 @app.route('/contacts/accept', methods=['POST'])
 @login_required
@@ -381,13 +384,13 @@ def accept_contact():
 
     # Accepter la demande (Mettre à jour l'entrée existante)
     cursor.execute("""
-        UPDATE contacts SET status = 'accepted' 
+        UPDATE contacts SET status = 'accepted'
         WHERE user_id = %s AND contact_id = %s
     """, (contact_id, user_id))
 
     # Ajouter une entrée réciproque avec la même clé de contact
     cursor.execute("""
-        INSERT INTO contacts (user_id, contact_id, status, contact_key) 
+        INSERT INTO contacts (user_id, contact_id, status, contact_key)
         SELECT %s, %s, 'accepted', %s FROM DUAL
         WHERE NOT EXISTS (
             SELECT 1 FROM contacts WHERE user_id = %s AND contact_id = %s
@@ -400,7 +403,6 @@ def accept_contact():
 
     return jsonify({"success": True, "message": "Contact accepté"}), 200
 
-
 @app.route('/contacts/list', methods=['GET'])
 @login_required
 def list_contacts():
@@ -410,7 +412,7 @@ def list_contacts():
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT users.id, users.username 
+        SELECT users.id, users.username
         FROM contacts
         JOIN users ON contacts.contact_id = users.id
         WHERE contacts.user_id = %s AND contacts.status = 'accepted'
@@ -421,7 +423,6 @@ def list_contacts():
     conn.close()
 
     return jsonify({"success": True, "contacts": contacts})
-
 
 @app.route('/set_active_status', methods=['POST'])
 @login_required
@@ -447,21 +448,18 @@ def set_active_status():
 
     return jsonify({'success': True})
 
-
-
-
 @app.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
     logger.info("Début de la fonction send_message")
     logger.info(f"Session: {session}")
-    
+
     conn = None
     cursor = None
     try:
         data = request.get_json()
         logger.info(f"Données reçues: {data}")
-        
+
         if not data:
             logger.error("Données JSON invalides ou manquantes")
             return jsonify({'success': False, 'error': 'Données JSON invalides'}), 400
@@ -476,72 +474,80 @@ def send_message():
         logger.info(f"Message écrit: {message}")
 
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True, buffered=True)  # Utiliser un curseur bufferisé
-        
+        cursor = conn.cursor(dictionary=True, buffered=True)
+
         # Vérifier si le contact existe et est accepté
         cursor.execute('''
-            SELECT status FROM contacts 
+            SELECT status FROM contacts
             WHERE (user_id = %s AND contact_id = %s)
             OR (user_id = %s AND contact_id = %s)
         ''', (session['user_id'], contact_id, contact_id, session['user_id']))
-        
+
         contact = cursor.fetchone()
-        
+
         if not contact:
             logger.error(f"Contact non trouvé: user_id={session['user_id']}, contact_id={contact_id}")
             return jsonify({'success': False, 'error': 'Contact non trouvé'}), 404
-            
+
         if contact['status'] != 'accepted':
             logger.error(f"Contact non accepté: status={contact['status']}")
             return jsonify({'success': False, 'error': 'Contact non accepté'}), 403
 
-        # Chiffrer le message avec une clé aléatoire
-        encrypted_message, key = encrypt(message)
-        logger.info(f"Clé de chiffrement non chiffrée: {key}")
-        logger.info(f"Message chiffré: {encrypted_message}")
-        
-        # Récupérer la clé de contact
-        cursor.execute("SELECT contact_key FROM contacts WHERE (user_id = %s AND contact_id = %s) OR (user_id = %s AND contact_id = %s)", 
-                       (session['user_id'], contact_id, contact_id, session['user_id']))
-        contact = cursor.fetchone()
-        contact_key = contact['contact_key']
-        
-        # Chiffrer la clé avec la clé de contact
-        encrypted_key = encrypt_key(key, contact_key)
-        logger.info(f"Clé chiffrée: {encrypted_key} avec la contact_key: {contact_key}")
-        
-        # Insérer le message avec la clé chiffrée
+        # Récupérer la clé publique du destinataire
+        cursor.execute("SELECT public_key FROM users WHERE id = %s", (contact_id,))
+        receiver_public_key = cursor.fetchone()
+
+        if not receiver_public_key or not receiver_public_key['public_key']:
+            logger.error(f"Clé publique non trouvée pour le destinataire: contact_id={contact_id}")
+            return jsonify({'success': False, 'error': 'Clé publique non trouvée'}), 500
+
+        logger.debug(f"Clé publique du destinataire: {receiver_public_key['public_key']}")
+
+        # Chiffrer le message avec la clé publique du destinataire
+        encrypted_message_for_receiver = encrypt_message(message, receiver_public_key['public_key'].encode('utf-8'))
+        logger.info(f"Message chiffré pour le destinataire: {encrypted_message_for_receiver}")
+
+        # Chiffrer le message avec la clé publique de l'expéditeur
+        cursor.execute("SELECT public_key FROM users WHERE id = %s", (session['user_id'],))
+        sender_public_key = cursor.fetchone()
+
+        if not sender_public_key or not sender_public_key['public_key']:
+            logger.error(f"Clé publique non trouvée pour l'expéditeur: user_id={session['user_id']}")
+            return jsonify({'success': False, 'error': 'Clé publique non trouvée'}), 500
+
+        encrypted_message_for_sender = encrypt_message(message, sender_public_key['public_key'].encode('utf-8'))
+        logger.info(f"Message chiffré pour l'expéditeur: {encrypted_message_for_sender}")
+
+        # Insérer le message chiffré dans la base de données pour le destinataire
         cursor.execute('''
-            INSERT INTO messages (sender_id, receiver_id, content, cle, created_at)
-            VALUES (%s, %s, %s, %s, NOW())
-        ''', (session['user_id'], contact_id, encrypted_message, encrypted_key))
-        
-        # S'assurer qu'il n'y a pas de résultats non lus
-        while cursor.nextset():
-            pass
-            
-        # Important: commit avant de fermer
+            INSERT INTO messages (sender_id, receiver_id, content, created_at)
+            VALUES (%s, %s, %s, NOW())
+        ''', (session['user_id'], contact_id, encrypted_message_for_receiver))
+
+        # Insérer le message chiffré dans la base de données pour l'expéditeur
+        cursor.execute('''
+            INSERT INTO messages (sender_id, receiver_id, content, created_at)
+            VALUES (%s, %s, %s, NOW())
+        ''', (session['user_id'], session['user_id'], encrypted_message_for_sender))
+
         conn.commit()
-        
+
         return jsonify({'success': True})
-        
+
     except Exception as e:
         logger.error(f"Erreur lors de l'envoi du message: {str(e)}")
         if conn:
             conn.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-        
+
     finally:
         if cursor:
-            try:
-                # Consommer tous les résultats restants avant de fermer
-                while cursor.nextset():
-                    pass
-                cursor.close()
-            except Exception as e:
-                logger.error(f"Erreur lors de la fermeture du curseur: {str(e)}")
+            cursor.close()
         if conn:
             conn.close()
+
+
+
 
 @app.route('/contacts/pending', methods=['GET'])
 @login_required
@@ -552,7 +558,7 @@ def pending_contacts():
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT users.id, users.username 
+        SELECT users.id, users.username
         FROM contacts
         JOIN users ON contacts.user_id = users.id
         WHERE contacts.contact_id = %s AND contacts.status = 'pending'
@@ -588,7 +594,7 @@ def block_contact():
 
     # Mettre à jour le statut à "blocked"
     cursor.execute("""
-        UPDATE contacts SET status = 'blocked' 
+        UPDATE contacts SET status = 'blocked'
         WHERE user_id = %s AND contact_id = %s
     """, (contact_id, user_id))
     conn.commit()
@@ -604,33 +610,32 @@ def typing():
     try:
         data = request.get_json()
         receiver_id = data.get('receiver_id')
-        
+
         if not receiver_id:
             return jsonify({'success': False, 'error': 'ID du destinataire manquant'})
-        
+
         # Obtenir le socket client
         client_socket = get_socket_client(session['user_id'])
         if not client_socket:
             return jsonify({'success': False, 'error': 'Impossible de se connecter au serveur de chat'})
-        
+
         # Envoyer l'événement de frappe
         typing_data = {
             'type': 'typing',
             'sender_id': session['user_id'],
             'receiver_id': int(receiver_id)
         }
-        
+
         try:
             client_socket.send(json.dumps(typing_data).encode('utf-8'))
             return jsonify({'success': True})
         except Exception as e:
             logger.error(f"Erreur lors de l'envoi de l'événement de frappe: {e}")
             return jsonify({'success': False, 'error': 'Erreur lors de l\'envoi de l\'événement'})
-        
+
     except Exception as e:
         logger.error(f"Erreur lors de l'envoi de l'événement de frappe: {e}")
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/settings', methods=['GET'])
 @login_required
@@ -642,8 +647,6 @@ def settings():
     cursor.close()
     conn.close()
     return render_template('settings.html', user=user)
-
-
 
 @app.route('/update_settings', methods=['POST'])
 @login_required
@@ -677,8 +680,6 @@ def update_settings():
         logger.error(f"Erreur lors de la mise à jour des paramètres: {e}")
         return jsonify({'success': False})
 
-
-
 @app.route('/admin')
 @login_required
 @admin_required
@@ -686,17 +687,17 @@ def admin_dashboard():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
+
         # Récupérer tous les utilisateurs sauf l'admin
         cursor.execute("""
-            SELECT id, username, nom, prenom, created_at 
-            FROM users 
+            SELECT id, username, nom, prenom, created_at
+            FROM users
             WHERE id != %s
             ORDER BY created_at DESC
         """, (session['user_id'],))
-        
+
         users = cursor.fetchall()
-        
+
         return render_template('admin/admin_dashboard.html', users=users)
     except Exception as e:
         logger.error(f"Erreur dans le dashboard admin: {e}")
@@ -716,29 +717,30 @@ def add_user():
         password = data.get('password')
         nom = data.get('nom')
         prenom = data.get('prenom')
-        
+
         if not all([username, password, nom, prenom]):
             return jsonify({'success': False, 'error': 'Tous les champs sont requis'})
-        
+
         # Vérifier si l'utilisateur existe déjà
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
+
         cursor.execute('SELECT id FROM users WHERE username = %s', (username,))
         if cursor.fetchone():
             return jsonify({'success': False, 'error': 'Ce nom d\'utilisateur existe déjà'})
-        
+
         # Créer le nouvel utilisateur
         hashed_password = generate_password_hash(password)
+        private_key_pem, public_key_pem = generate_rsa_keys()
         cursor.execute(
-            'INSERT INTO users (username, password, nom, prenom) VALUES (%s, %s, %s, %s)',
-            (username, hashed_password, nom, prenom)
+            'INSERT INTO users (username, password, nom, prenom, public_key, private_key) VALUES (%s, %s, %s, %s, %s, %s)',
+            (username, hashed_password, nom, prenom, public_key_pem.decode('utf-8'), private_key_pem.decode('utf-8'))
         )
         conn.commit()
-        
+
         cursor.close()
         conn.close()
-        
+
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Erreur lors de l'ajout de l'utilisateur: {e}")
@@ -752,25 +754,25 @@ def reset_password(user_id):
         # Générer un nouveau mot de passe par défaut
         default_password = '123'
         hashed_password = generate_password_hash(default_password)
-        
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         # Vérifier que l'utilisateur existe
         cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
         user = cursor.fetchone()
-        
+
         if not user:
             return jsonify({'success': False, 'error': 'Utilisateur non trouvé'})
-        
+
         # Mettre à jour le mot de passe
-        cursor.execute('UPDATE users SET password = %s WHERE id = %s', 
+        cursor.execute('UPDATE users SET password = %s WHERE id = %s',
                       (hashed_password, user_id))
         conn.commit()
-        
+
         cursor.close()
         conn.close()
-        
+
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Erreur lors de la réinitialisation du mot de passe: {e}")
@@ -783,28 +785,28 @@ def delete_user(user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         # Vérifier que l'utilisateur existe et n'est pas admin
         cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
         user = cursor.fetchone()
-        
+
         if not user:
             return jsonify({'success': False, 'error': 'Utilisateur non trouvé'})
-        
+
         if user[0] == 'admin':
             return jsonify({'success': False, 'error': 'Impossible de supprimer l\'administrateur'})
-        
+
         # Supprimer les messages de l'utilisateur
-        cursor.execute('DELETE FROM messages WHERE sender_id = %s OR receiver_id = %s', 
+        cursor.execute('DELETE FROM messages WHERE sender_id = %s OR receiver_id = %s',
                       (user_id, user_id))
-        
+
         # Supprimer l'utilisateur
         cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
         conn.commit()
-        
+
         cursor.close()
         conn.close()
-        
+
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Erreur lors de la suppression de l'utilisateur: {e}")
@@ -820,7 +822,7 @@ def logout():
             except:
                 pass
             del socket_clients[session['user_id']]
-    
+
     session.clear()
     return redirect(url_for('login'))
 
@@ -834,7 +836,7 @@ def check_admin_status():
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-        
+
         return jsonify({
             'is_logged_in': True,
             'session_user_id': session.get('user_id'),

@@ -60,7 +60,7 @@ body, html {
 }
 
 .btn-logout:hover {
-  background-color: #2f2f2f;
+  background-color: rgb(45, 45, 45);
 }
 
 .material-symbols-outlined {
@@ -118,12 +118,12 @@ body, html {
 
 .edit-icon-label {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  background-color: #202020; /* Ajout d'une opacité pour mieux voir l'icône */
+  bottom: -3px;
+  right: 3px;
+  background-color: rgb(45, 45, 45); /* Ajout d'une opacité pour mieux voir l'icône */
   border-radius: 50%;
-  width: 30px;
-  height: 30px;
+  width: 35px;
+  height: 35px;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -132,8 +132,7 @@ body, html {
 
 .material-symbols-outlined.edit {
   color: #fff;
-  font-size: 19px;
-  margin: 2px 0 0 2px;
+  font-size: 22px;
   cursor: pointer;
 }
 

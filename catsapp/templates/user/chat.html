@@ -7,8 +7,6 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
-
-    
 </head>
 <body>
     {% if session.get('user_id') %}
@@ -29,7 +27,7 @@
                     <span class="material-symbols-outlined" id="settingsIcon">settings</span>
                 </a>
             </div>
-        </div>        
+        </div>
     </nav>
     {% endif %}
 
@@ -71,7 +69,6 @@
                     <ul style="list-style-type: none;" id="pending-contacts"></ul>
                 </div>
             </div>
-            
 
             <!-- Liste des contacts -->
             <div class="contacts-list" id="contactsList">
@@ -94,11 +91,10 @@
             </div>
         </div>
 
-
         <script>
             let activityTimer;
             let isActive = true;
-        
+
             function sendActivityStatus(status) {
                 fetch('/set_active_status', {
                     method: 'POST',
@@ -108,7 +104,7 @@
                     body: JSON.stringify({ status: status })
                 });
             }
-        
+
             function resetActivityTimer() {
                 clearTimeout(activityTimer);
                 activityTimer = setTimeout(() => {
@@ -116,25 +112,21 @@
                     sendActivityStatus('inactive');
                 }, 120000); // 2 minutes
             }
-        
+
             window.onload = function() {
                 sendActivityStatus('active');
                 resetActivityTimer();
-        
+
                 // Réinitialiser le timer à chaque activité
                 document.addEventListener('keypress', resetActivityTimer);
                 document.addEventListener('click', resetActivityTimer);
                 document.addEventListener('mousemove', resetActivityTimer);
             };
-        
+
             window.onbeforeunload = function() {
                 sendActivityStatus('inactive');
             };
         </script>
-        
-        
-        
-        
 
         <!-- Zone de chat -->
         <div class="chat-container">
@@ -144,7 +136,8 @@
                         {% if message.sender_id == session.user_id %}
                             <div class="message message-sent">
                                 <div class="message-content">
-                                    <p>{{ message.content }}</p></div>
+                                    <p>{{ message.content }}</p>
+                                </div>
                                 <small class="message-time">
                                     {% if message.created_at.date() == current_time.date() %}
                                         {{ message.created_at.strftime('%H:%M') }}
@@ -177,20 +170,18 @@
                         </button>
                     </form>
                     <button type="submit" form="messageForm" class="btn-send-chat">
-                        <span style="font-size: 30px; color: #b4b4b4;" class="material-symbols-outlined">send</span>
+                        <span style="font-size: 30px; color: #fff;" class="material-symbols-outlined">send</span>
                     </button>
                 </div>
 
             {% else %}
                 <div class="no-contact-message">
-                    <!-- <img style="width: 100px;" src="{{ url_for('static', filename='img/logo.png') }}"> -->
                     <h2 style="font-size: 55px; margin: 0; padding: 0;">CatsApp</h2>
                     <p style="font-size: 1.3em; font-weight: bold; color: #999;" class="text-muted">Ouvrez une conversation pour commencer à discuter !</p>
                 </div>
             {% endif %}
         </div>
     </div>
-    
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -199,7 +190,7 @@
             var chatContainer = document.querySelector(".chat-container");
             var addContactBtn = document.getElementById("addContactBtn");
             var addContactPopup = document.getElementById("addContactPopup");
-    
+
             toggleSidebarBtn.addEventListener("click", function() {
                 if (window.innerWidth <= 1050) {
                     sidebar.classList.toggle("show");
@@ -213,14 +204,14 @@
                     chatContainer.classList.toggle("expanded");
                 }
             });
-    
+
             window.addEventListener("resize", function() {
                 if (window.innerWidth > 1050) {
                     sidebar.classList.remove("show");
                     chatContainer.style.display = "flex";
                 }
             });
-    
+
             addContactBtn.addEventListener("click", function() {
                 addContactPopup.style.display = "flex"; // Affiche la popup lorsque le bouton est cliqué
             });
@@ -249,24 +240,24 @@
             // Charger les demandes de contact
             loadPendingContacts();
         });
-    
+
         function toggleMenu() {
             var menu = document.getElementById("settingsMenu");
             var icon = document.getElementById("settingsIcon");
             menu.classList.toggle("active");
             icon.classList.toggle("rotate-30");
         }
-    
+
         function closePopup() {
             var addContactPopup = document.getElementById("addContactPopup");
             addContactPopup.style.display = "none"; // Masque la popup
         }
-    
+
         document.addEventListener("click", function(event) {
             var settingsBtn = document.querySelector(".btn-settings");
             var menu = document.getElementById("settingsMenu");
             var icon = document.getElementById("settingsIcon");
-    
+
             if (!settingsBtn.contains(event.target)) {
                 menu.classList.remove("active");
                 icon.classList.remove("rotate-30");
@@ -324,66 +315,60 @@
             .catch(error => console.error("Erreur:", error));
         }
     </script>
-    
-    
-    
-    
 
+    <script>
+        document.getElementById("add-contact-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            let username = document.getElementById("contact-username").value;
 
-
-<script>
-    document.getElementById("add-contact-form").addEventListener("submit", function(event) {
-        event.preventDefault();
-        let username = document.getElementById("contact-username").value;
-
-        fetch('/contacts/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username })
-        })
-        .then(response => response.json())
-        .then(data => {
-            let messageElem = document.getElementById("add-contact-message");
-            messageElem.style.color = data.success ? "green" : "red";
-            messageElem.textContent = data.message;
-        })
-        .catch(error => console.error('Erreur:', error));
-    });
-
-    {% if current_contact %}
-    const messageForm = document.getElementById("messageForm");
-    const messageContent = document.getElementById("messageContent");
-    const messageContainer = document.getElementById("messageContainer");
-
-    function reloadMessages() {
-        fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
-        .then(response => response.text())
-        .then(html => {
-            let parser = new DOMParser();
-            let doc = parser.parseFromString(html, 'text/html');
-            messageContainer.innerHTML = doc.getElementById('messageContainer').innerHTML;
-            messageContainer.scrollTop = messageContainer.scrollHeight;
-        })
-        .catch(error => console.error('Erreur:', error));
-    }
-
-    messageForm.addEventListener("submit", function(e) {
-        e.preventDefault();
-        let content = messageContent.value.trim();
-        if (content) {
-            fetch('{{ url_for("send_message") }}', {
+            fetch('/contacts/add', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contact_id: {{ current_contact.id }}, message: content })
-            }).then(response => response.json())
-            .then(() => {
-                messageContent.value = '';
-                reloadMessages();
-            }).catch(error => console.error('Erreur:', error));
+                body: JSON.stringify({ username: username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let messageElem = document.getElementById("add-contact-message");
+                messageElem.style.color = data.success ? "green" : "red";
+                messageElem.textContent = data.message;
+            })
+            .catch(error => console.error('Erreur:', error));
+        });
+
+        {% if current_contact %}
+        const messageForm = document.getElementById("messageForm");
+        const messageContent = document.getElementById("messageContent");
+        const messageContainer = document.getElementById("messageContainer");
+
+        function reloadMessages() {
+            fetch('{{ url_for("chat", contact_id=current_contact.id) }}')
+            .then(response => response.text())
+            .then(html => {
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(html, 'text/html');
+                messageContainer.innerHTML = doc.getElementById('messageContainer').innerHTML;
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            })
+            .catch(error => console.error('Erreur:', error));
         }
-    });
-    {% endif %}
-</script>
+
+        messageForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            let content = messageContent.value.trim();
+            if (content) {
+                fetch('{{ url_for("send_message") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contact_id: {{ current_contact.id }}, message: content })
+                }).then(response => response.json())
+                .then(() => {
+                    messageContent.value = '';
+                    reloadMessages();
+                }).catch(error => console.error('Erreur:', error));
+            }
+        });
+        {% endif %}
+    </script>
 
 </body>
 </html>
