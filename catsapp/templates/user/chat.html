@@ -63,7 +63,7 @@
             </div>
 
             <!-- Carte Demandes de contact -->
-            <div class="pending-contacts" id="pendingContactsSection" style="display: none;">
+            <div class="pending-contacts" id="pendingContactsSection">
                 <div class="pending-contacts-card">
                     <h3>Demandes de contact</h3>
                     <ul style="list-style-type: none;" id="pending-contacts"></ul>
@@ -265,21 +265,21 @@
         });
 
         function loadPendingContacts() {
-            fetch('/contacts/pending')
+            fetch('/friend_requests')
             .then(response => response.json())
             .then(data => {
                 let list = document.getElementById("pending-contacts");
                 let section = document.getElementById("pendingContactsSection");
-                if (data.contacts.length === 0) {
+                if (data.friend_requests.length === 0) {
                     section.style.display = "none";
                 } else {
                     section.style.display = "block";
                     list.innerHTML = "";
-                    data.contacts.forEach(contact => {
+                    data.friend_requests.forEach(request => {
                         let li = document.createElement("li");
-                        li.innerHTML = `<span class="contact-name">${contact.username}</span>
-                            <button class="action-btn accept-btn" onclick="acceptContact(${contact.id})">Accepter</button>
-                            <button class="action-btn block-btn" onclick="blockContact(${contact.id})">Bloquer</button>`;
+                        li.innerHTML = `<span class="contact-name">${request.username}</span>
+                            <button class="action-btn accept-btn" onclick="acceptFriendRequest(${request.id})">Accepter</button>
+                            <button class="action-btn reject-btn" onclick="rejectFriendRequest(${request.id})">Rejeter</button>`;
                         list.appendChild(li);
                     });
                 }
@@ -287,11 +287,11 @@
             .catch(error => console.error("Erreur lors du chargement des demandes:", error));
         }
 
-        function acceptContact(contactId) {
+        function acceptFriendRequest(sender_id) {
             fetch('/contacts/accept', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contact_id: contactId })
+                body: JSON.stringify({ sender_id: sender_id })
             })
             .then(response => response.json())
             .then(data => {
@@ -301,11 +301,11 @@
             .catch(error => console.error("Erreur:", error));
         }
 
-        function blockContact(contactId) {
-            fetch('/contacts/block', {
+        function rejectFriendRequest(sender_id) {
+            fetch('/contacts/reject', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contact_id: contactId })
+                body: JSON.stringify({ sender_id: sender_id })
             })
             .then(response => response.json())
             .then(data => {
