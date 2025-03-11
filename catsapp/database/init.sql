@@ -9,8 +9,6 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
-    public_key TEXT,  -- Ajout de la colonne pour la clé publique
-    private_key TEXT, -- Ajout de la colonne pour la clé privée
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,7 +30,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     user_id INT NOT NULL,
     contact_id INT NOT NULL,
     status ENUM('pending', 'accepted', 'blocked') DEFAULT 'pending',
-    contact_key TEXT,  -- Augmentation de la taille de la colonne pour stocker la clé publique RSA
+    contact_key TEXT,  -- Augmentation de la taille de la colonne pour stocker la clé AES
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (contact_id) REFERENCES users(id) ON DELETE CASCADE,

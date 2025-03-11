@@ -8,9 +8,7 @@ import json
 import threading
 from functools import wraps
 from datetime import datetime
-from encryption import generate_rsa_keys, encrypt_message, decrypt_message, generate_symmetric_key, encrypt_symmetric_key, decrypt_symmetric_key
-
-
+from encryption import generate_aes_key, encrypt_message, decrypt_message
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG)
@@ -183,16 +181,14 @@ def register():
 
         try:
             hashed_password = generate_password_hash(password)
-            private_key_pem, public_key_pem = generate_rsa_keys()
-            logger.debug(f"Clé publique: {public_key_pem.decode('utf-8')}")
-            logger.debug(f"Clé privée: {private_key_pem.decode('utf-8')}")
+            logger.debug(f"Mot de passe haché généré.")
 
             conn = get_db_connection()
             cursor = conn.cursor()
 
             cursor.execute(
-                'INSERT INTO users (username, password, nom, prenom, public_key, private_key) VALUES (%s, %s, %s, %s, %s, %s)',
-                (username, hashed_password, nom, prenom, public_key_pem.decode('utf-8'), private_key_pem.decode('utf-8'))
+                'INSERT INTO users (username, password, nom, prenom) VALUES (%s, %s, %s, %s)',
+                (username, hashed_password, nom, prenom)
             )
             conn.commit()
             flash('Inscription réussie ! Vous pouvez maintenant vous connecter.')
@@ -218,7 +214,7 @@ def chat(contact_id=None):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Récupère les contacts de l'utilisateur et trie par date du dernier message
+        # Récupérer les contacts de l'utilisateur et trier par date du dernier message
         cursor.execute("""
             SELECT users.id, users.username, contacts.contact_key,
                    (SELECT MAX(created_at) FROM messages
@@ -246,8 +242,8 @@ def chat(contact_id=None):
             if last_message:
                 # Déchiffrer le dernier message pour l'aperçu
                 try:
-                    symmetric_key = decrypt_symmetric_key(contact['contact_key'], session['private_key'].encode('utf-8'))
-                    decrypted_message = decrypt_message(last_message['content'], symmetric_key)
+                    aes_key = bytes.fromhex(contact['contact_key'])
+                    decrypted_message = decrypt_message(last_message['content'], aes_key)
                     contact['last_message'] = decrypted_message
                     logger.debug(f"Dernier message déchiffré: {contact['last_message']}")
                 except Exception as e:
@@ -287,8 +283,8 @@ def chat(contact_id=None):
                     decrypted_msg = msg.copy()
                     # Déchiffrer le message
                     try:
-                        symmetric_key = decrypt_symmetric_key(current_contact['contact_key'], session['private_key'].encode('utf-8'))
-                        decrypted_content = decrypt_message(msg['content'], symmetric_key)
+                        aes_key = bytes.fromhex(current_contact['contact_key'])
+                        decrypted_content = decrypt_message(msg['content'], aes_key)
                         decrypted_msg['content'] = decrypted_content
                         logger.debug(f"Message déchiffré: {decrypted_msg['content']}")
                     except Exception as e:
@@ -297,9 +293,8 @@ def chat(contact_id=None):
                     messages.append(decrypted_msg)
 
         # Récupérer l'utilisateur connecté
-        cursor.execute("SELECT id, username, private_key FROM users WHERE id = %s", (session['user_id'],))
+        cursor.execute("SELECT id, username FROM users WHERE id = %s", (session['user_id'],))
         user = cursor.fetchone()
-        session['private_key'] = user['private_key']
 
         # Passer l'utilisateur connecté et l'heure actuelle au template
         return render_template('user/chat.html',
@@ -316,7 +311,6 @@ def chat(contact_id=None):
     finally:
         cursor.close()
         conn.close()
-
 
 @app.route('/contacts/add', methods=['POST'])
 @login_required
@@ -362,7 +356,6 @@ def add_contact():
 
     return jsonify({"success": True, "message": "Demande d'ami envoyée"}), 201
 
-
 @app.route('/contacts/accept', methods=['POST'])
 @login_required
 def accept_contact():
@@ -387,36 +380,16 @@ def accept_contact():
     if not pending_request:
         return jsonify({"success": False, "message": "Aucune demande en attente trouvée"}), 404
 
-    # Générer une clé symétrique
-    symmetric_key = generate_symmetric_key()
+    # Générer une clé AES
+    aes_key = generate_aes_key()
 
-    # Récupérer les clés publiques des deux utilisateurs
-    cursor.execute("SELECT public_key FROM users WHERE id = %s", (sender_id,))
-    sender_public_key_result = cursor.fetchone()
-    if not sender_public_key_result or not sender_public_key_result['public_key']:
-        return jsonify({"success": False, "message": "Clé publique de l'expéditeur non trouvée"}), 500
-    sender_public_key = sender_public_key_result['public_key']
-
-    cursor.execute("SELECT public_key FROM users WHERE id = %s", (user_id,))
-    receiver_public_key_result = cursor.fetchone()
-    if not receiver_public_key_result or not receiver_public_key_result['public_key']:
-        return jsonify({"success": False, "message": "Clé publique du receveur non trouvée"}), 500
-    receiver_public_key = receiver_public_key_result['public_key']
-
-    # Chiffrer la clé symétrique avec les clés publiques des deux utilisateurs
-    try:
-        encrypted_symmetric_key_for_sender = encrypt_symmetric_key(symmetric_key, sender_public_key.encode('utf-8'))
-        encrypted_symmetric_key_for_receiver = encrypt_symmetric_key(symmetric_key, receiver_public_key.encode('utf-8'))
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Erreur lors du chiffrement de la clé symétrique: {str(e)}"}), 500
-
-    # Insérer les contacts avec la clé symétrique chiffrée pour les deux utilisateurs
+    # Insérer les contacts avec la clé AES pour les deux utilisateurs
     try:
         cursor.execute("INSERT INTO contacts (user_id, contact_id, status, contact_key) VALUES (%s, %s, 'accepted', %s)",
-                       (sender_id, user_id, encrypted_symmetric_key_for_sender))
+                       (sender_id, user_id, aes_key.hex()))
 
         cursor.execute("INSERT INTO contacts (user_id, contact_id, status, contact_key) VALUES (%s, %s, 'accepted', %s)",
-                       (user_id, sender_id, encrypted_symmetric_key_for_receiver))
+                       (user_id, sender_id, aes_key.hex()))
     except Exception as e:
         conn.rollback()
         return jsonify({"success": False, "message": f"Erreur lors de l'insertion des contacts: {str(e)}"}), 500
@@ -429,7 +402,6 @@ def accept_contact():
     conn.close()
 
     return jsonify({"success": True, "message": "Contact accepté"}), 200
-
 
 @app.route('/contacts/list', methods=['GET'])
 @login_required
@@ -452,7 +424,6 @@ def list_contacts():
 
     return jsonify({"success": True, "contacts": contacts})
 
-
 @app.route('/friend_requests', methods=['GET'])
 @login_required
 def get_friend_requests():
@@ -474,7 +445,6 @@ def get_friend_requests():
     conn.close()
 
     return jsonify({"success": True, "friend_requests": friend_requests})
-
 
 @app.route('/set_active_status', methods=['POST'])
 @login_required
@@ -544,18 +514,12 @@ def send_message():
             logger.error(f"Contact non accepté: status={contact['status']}")
             return jsonify({'success': False, 'error': 'Contact non accepté'}), 403
 
-        # Déchiffrer la clé symétrique avec ma clé privée
-        private_key_pem = session['private_key'].encode('utf-8')
-        try:
-            symmetric_key = decrypt_symmetric_key(contact['contact_key'], private_key_pem)
-            logger.info("Clé symétrique déchiffrée avec succès.")
-        except Exception as e:
-            logger.error(f"Erreur lors du déchiffrement de la clé symétrique: {e}")
-            return jsonify({'success': False, 'error': 'Erreur lors du déchiffrement de la clé symétrique'}), 500
+        # Utiliser la clé AES directement
+        aes_key = bytes.fromhex(contact['contact_key'])
 
-        # Chiffrer le message avec la clé symétrique
+        # Chiffrer le message avec la clé AES
         try:
-            encrypted_message = encrypt_message(message, symmetric_key)
+            encrypted_message = encrypt_message(message, aes_key)
             logger.info("Message chiffré avec succès.")
         except Exception as e:
             logger.error(f"Erreur lors du chiffrement du message: {e}")
@@ -587,7 +551,6 @@ def send_message():
             cursor.close()
         if conn:
             conn.close()
-
 
 @app.route('/contacts/pending', methods=['GET'])
 @login_required
@@ -677,7 +640,6 @@ def typing():
         logger.error(f"Erreur lors de l'envoi de l'événement de frappe: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-
 @app.route('/get_new_messages/<int:contact_id>', methods=['GET'])
 @login_required
 def get_new_messages(contact_id):
@@ -702,8 +664,8 @@ def get_new_messages(contact_id):
             decrypted_msg = msg.copy()
             # Déchiffrer le message
             try:
-                symmetric_key = decrypt_symmetric_key(current_contact['contact_key'], session['private_key'].encode('utf-8'))
-                decrypted_content = decrypt_message(msg['content'], symmetric_key)
+                aes_key = bytes.fromhex(current_contact['contact_key'])
+                decrypted_content = decrypt_message(msg['content'], aes_key)
                 decrypted_msg['content'] = decrypted_content
                 logger.debug(f"Message déchiffré: {decrypted_msg['content']}")
             except Exception as e:
@@ -719,7 +681,6 @@ def get_new_messages(contact_id):
     finally:
         cursor.close()
         conn.close()
-
 
 @app.route('/settings', methods=['GET'])
 @login_required
@@ -815,10 +776,9 @@ def add_user():
 
         # Créer le nouvel utilisateur
         hashed_password = generate_password_hash(password)
-        private_key_pem, public_key_pem = generate_rsa_keys()
         cursor.execute(
-            'INSERT INTO users (username, password, nom, prenom, public_key, private_key) VALUES (%s, %s, %s, %s, %s, %s)',
-            (username, hashed_password, nom, prenom, public_key_pem.decode('utf-8'), private_key_pem.decode('utf-8'))
+            'INSERT INTO users (username, password, nom, prenom) VALUES (%s, %s, %s, %s)',
+            (username, hashed_password, nom, prenom)
         )
         conn.commit()
 
