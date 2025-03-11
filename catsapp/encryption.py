@@ -1,100 +1,235 @@
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-import base64
-import os
-import logging
+from base64 import b64encode, b64decode
+import random
+import string
+'''
+# CHIFFREMENT CÉSAR
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+def generate_random_key():
+    """Génère une clé aléatoire de longueur 1 lettre pour le chiffrement César."""
+    return random.choice(string.ascii_uppercase)
 
-def generate_rsa_keys():
-    """Génère une paire de clés RSA."""
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
-    public_key = private_key.public_key()
+def encrypt(text):
+    """
+    Chiffre un texte en utilisant le chiffrement de César avec une clé aléatoire.
+    
+    Args:
+        text (str): Le texte à chiffrer
+    
+    Returns:
+        tuple: (texte_chiffré, clé)
+    """
+    if not text:
+        return "", ""
+        
+    # Générer une clé aléatoire
+    key = generate_random_key()
+    
+    encrypted = ""
+    key = key.upper()
+    key_shift = ord(key) - ord('A')
+    
+    for char in text:
+        if char.isalpha():
+            # Détermine si le caractère est en majuscule ou minuscule
+            is_upper = char.isupper()
+            char_idx = ord(char.upper()) - ord('A')
+            
+            # Applique le chiffrement de César
+            encrypted_idx = (char_idx + key_shift) % 26
+            
+            # Convertit l'index en caractère en préservant la casse
+            encrypted_char = chr(encrypted_idx + ord('A'))
+            if not is_upper:
+                encrypted_char = encrypted_char.lower()
+            
+            encrypted += encrypted_char
+        else:
+            encrypted += char
+            
+    return encrypted, key
 
-    private_key_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    )
+def decrypt(text, key):
+    """
+    Déchiffre un texte chiffré avec le chiffrement de César.
+    
+    Args:
+        text (str): Le texte à déchiffrer
+        key (str): La clé de déchiffrement
+    
+    Returns:
+        str: Le texte déchiffré
+    """
+    if not text or not key:
+        return ""
+        
+    decrypted = ""
+    key = key.upper()
+    key_shift = ord(key) - ord('A')
+    
+    for char in text:
+        if char.isalpha():
+            # Détermine si le caractère est en majuscule ou minuscule
+            is_upper = char.isupper()
+            char_idx = ord(char.upper()) - ord('A')
+            
+            # Applique le déchiffrement de César
+            decrypted_idx = (char_idx - key_shift) % 26
+            
+            # Convertit l'index en caractère en préservant la casse
+            decrypted_char = chr(decrypted_idx + ord('A'))
+            if not is_upper:
+                decrypted_char = decrypted_char.lower()
+            
+            decrypted += decrypted_char
+        else:
+            decrypted += char
+            
+    return decrypted
 
-    public_key_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
+def encrypt_key(key, contact_key):
+    """
+    Chiffre une clé avec une contact_key.
+    
+    Args:
+        key (str): La clé à chiffrer
+        contact_key (str): La clé de contact utilisée pour le chiffrement
+    
+    Returns:
+        str: La clé chiffrée
+    """
+    encrypted_key = ''.join(chr((ord(k) + ord(c)) % 256) for k, c in zip(key, contact_key))
+    return b64encode(encrypted_key.encode()).decode()
 
-    return private_key_pem, public_key_pem
+def decrypt_key(encrypted_key, contact_key):
+    """
+    Déchiffre une clé chiffrée avec une contact_key.
+    
+    Args:
+        encrypted_key (str): La clé chiffrée
+        contact_key (str): La clé de contact utilisée pour le déchiffrement
+    
+    Returns:
+        str: La clé déchiffrée
+    """
+    encrypted_key = b64decode(encrypted_key).decode()
+    decrypted_key = ''.join(chr((ord(k) - ord(c)) % 256) for k, c in zip(encrypted_key, contact_key))
+    return decrypted_key
+'''
+def generate_random_key():
+    """Génère une clé aléatoire de longueur entre 10 et 15 lettres."""
+    key_length = random.randint(10, 15)
+    return ''.join(random.choices(string.ascii_uppercase, k=key_length))
 
-def generate_symmetric_key():
-    """Génère une clé symétrique."""
-    salt = os.urandom(16)
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=100000,
-        backend=default_backend()
-    )
-    key = kdf.derive(os.urandom(32))
-    return key
+def encrypt(text):
+    """
+    Chiffre un texte en utilisant le chiffrement de Vigenère avec une clé aléatoire.
+    
+    Args:
+        text (str): Le texte à chiffrer
+    
+    Returns:
+        tuple: (texte_chiffré, clé)
+    """
+    if not text:
+        return "", ""
+        
+    # Générer une clé aléatoire
+    key = generate_random_key()
+    
+    encrypted = ""
+    key = key.upper()
+    key_length = len(key)
+    key_as_int = [ord(i) - ord('A') for i in key]
+    
+    for i, char in enumerate(text):
+        if char.isalpha():
+            # Détermine si le caractère est en majuscule ou minuscule
+            is_upper = char.isupper()
+            char_idx = ord(char.upper()) - ord('A')
+            # Utilise la clé de manière cyclique
+            key_idx = key_as_int[i % key_length]
+            
+            # Applique le chiffrement de Vigenère
+            encrypted_idx = (char_idx + key_idx) % 26
+            
+            # Convertit l'index en caractère en préservant la casse
+            encrypted_char = chr(encrypted_idx + ord('A'))
+            if not is_upper:
+                encrypted_char = encrypted_char.lower()
+            
+            encrypted += encrypted_char
+        else:
+            encrypted += char
+            
+    return encrypted, key
 
-def encrypt_message(message, key):
-    """Chiffre un message avec une clé symétrique."""
-    iv = os.urandom(16)
-    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
-    encryptor = cipher.encryptor()
-    encrypted_message = encryptor.update(message.encode('utf-8')) + encryptor.finalize()
-    logger.debug(f"Message chiffré: {base64.b64encode(encrypted_message).decode('utf-8')}")
-    return base64.b64encode(iv + encrypted_message).decode('utf-8')
+def decrypt(text, key):
+    """
+    Déchiffre un texte chiffré avec le chiffrement de Vigenère.
+    
+    Args:
+        text (str): Le texte à déchiffrer
+        key (str): La clé de déchiffrement
+    
+    Returns:
+        str: Le texte déchiffré
+    """
+    if not text or not key:
+        return ""
+        
+    decrypted = ""
+    key = key.upper()
+    key_length = len(key)
+    key_as_int = [ord(i) - ord('A') for i in key]
+    
+    for i, char in enumerate(text):
+        if char.isalpha():
+            # Détermine si le caractère est en majuscule ou minuscule
+            is_upper = char.isupper()
+            char_idx = ord(char.upper()) - ord('A')
+            
+            # Utilise la clé de manière cyclique
+            key_idx = key_as_int[i % key_length]
+            
+            # Applique le déchiffrement de Vigenère
+            decrypted_idx = (char_idx - key_idx) % 26
+            
+            # Convertit l'index en caractère en préservant la casse
+            decrypted_char = chr(decrypted_idx + ord('A'))
+            if not is_upper:
+                decrypted_char = decrypted_char.lower()
+            
+            decrypted += decrypted_char
+        else:
+            decrypted += char
+            
+    return decrypted
 
-def decrypt_message(encrypted_message, key):
-    """Déchiffre un message avec une clé symétrique."""
-    try:
-        encrypted_message_bytes = base64.b64decode(encrypted_message.encode('utf-8'))
-        iv = encrypted_message_bytes[:16]
-        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
-        decryptor = cipher.decryptor()
-        decrypted_message = decryptor.update(encrypted_message_bytes[16:]) + decryptor.finalize()
-        logger.debug(f"Message déchiffré: {decrypted_message.decode('utf-8')}")
-        return decrypted_message.decode('utf-8')
-    except Exception as e:
-        logger.error(f"Erreur lors du déchiffrement du message: {str(e)}")
-        raise
+def encrypt_key(key, contact_key):
+    """
+    Chiffre une clé avec une contact_key.
+    
+    Args:
+        key (str): La clé à chiffrer
+        contact_key (str): La clé de contact utilisée pour le chiffrement
+    
+    Returns:
+        str: La clé chiffrée
+    """
+    encrypted_key = ''.join(chr((ord(k) + ord(c)) % 256) for k, c in zip(key, contact_key))
+    return b64encode(encrypted_key.encode()).decode()
 
-def encrypt_symmetric_key(symmetric_key, public_key_pem):
-    """Chiffre une clé symétrique avec une clé publique RSA."""
-    public_key = serialization.load_pem_public_key(public_key_pem, backend=default_backend())
-    encrypted_key = public_key.encrypt(
-        symmetric_key,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return base64.b64encode(encrypted_key).decode('utf-8')
-
-def decrypt_symmetric_key(encrypted_key, private_key_pem):
-    """Déchiffre une clé symétrique avec une clé privée RSA."""
-    try:
-        private_key = serialization.load_pem_private_key(private_key_pem, password=None, backend=default_backend())
-        encrypted_key_bytes = base64.b64decode(encrypted_key.encode('utf-8'))
-        decrypted_key = private_key.decrypt(
-            encrypted_key_bytes,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        )
-        return decrypted_key
-    except Exception as e:
-        logger.error(f"Erreur lors du déchiffrement de la clé symétrique: {str(e)}")
-        raise
+def decrypt_key(encrypted_key, contact_key):
+    """
+    Déchiffre une clé chiffrée avec une contact_key.
+    
+    Args:
+        encrypted_key (str): La clé chiffrée
+        contact_key (str): La clé de contact utilisée pour le déchiffrement
+    
+    Returns:
+        str: La clé déchiffrée
+    """
+    encrypted_key = b64decode(encrypted_key).decode()
+    decrypted_key = ''.join(chr((ord(k) - ord(c)) % 256) for k, c in zip(encrypted_key, contact_key))
+    return decrypted_key
